@@ -208,7 +208,7 @@ class Optimizer:
         edge_force = edge_force.sum(dim=1)  # v, 3
         edge_force = edge_force / div
 
-        ## target edge grad
+        # target edge grad
         edge_grad = target_dif * pad_mask
         edge_grad = -edge_grad.sum() / pad_mask.sum()
 

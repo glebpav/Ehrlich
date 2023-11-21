@@ -27,13 +27,13 @@ class Atom:
 
 
 class Molecule:
-    def __init__(self, atoms):
+    def __init__(self, atoms: list[Atom]):
         self.atoms = atoms
         self.coords = self.__get_coords(atoms)
         self.original_mol = None
 
     def __iter__(self):
-        return self.atoms
+        return iter(self.atoms)
 
     @staticmethod
     def __get_coords(atoms):
