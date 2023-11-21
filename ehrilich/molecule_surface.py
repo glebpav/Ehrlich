@@ -1,12 +1,8 @@
-import math
-import os.path
 import pickle
 import time
 
-import numpy as np
-
 from ehrilich.optimizer import Optimizer
-from ehrilich.utils.geometry_utils import Sphere
+from ehrilich.sphere import Sphere
 from ehrilich.utils.math_utils import *
 
 
@@ -43,10 +39,16 @@ class Point:
 
 
 class MoleculeSurface:
-    def __init__(self, points, bounds=None):
+    def __init__(self, points):
         self.__molecule = None
         self.points = points
-        self.bounds = bounds
+        self.bounds = self.parse_points_bounds()
+
+    def parse_points_bounds(self):
+        bounds = []
+        for point in self.points:
+            bounds.append(point.neighbors_points_idx)
+        return bounds
 
     @property
     def molecule(self):
@@ -80,23 +82,25 @@ class MoleculeSurface:
             self.molecule[best_atom_idx] = point_idx
 
 
-# done - Создает внутри сферу
-# done - оптимизатор
-# done - сжимает сферу.
-# done - Для каждой точки сферы создает объект Point,
-# done - записывает в него начальные и сжатые кооринаты и список её соседей.
-# done - После создает объект MoleculeSurface на списке точек и свяей между ними.
-# done - В поле __molecule записывает молекулу на которой сжималась сфера.
-# done - Возвращает обект MoleculeSurfac.
-
-def make_surface(molecule, split_times=6):
+def make_surface(
+        molecule,
+        split_times=6,
+        n_steps=10000,
+        time_step=1e-1,
+        lambda_k=0.5,
+        close_atoms_ratio=1.35,
+        comp_f_ratio=0.3,
+        # comp_f_ratio=1.,
+        patience=50,
+        last_weight=0.9,
+        accuracy_degree=3,
+        doorstep_accuracy=1e-7
+):
     # sphere creation
     molecule_radius = molecule.get_radius()
     sphere = Sphere(molecule_radius + 10)
     for _ in range(split_times):
         print(sphere.split())
-
-    points = [Point(origin_coords=list.copy(sphere_point)) for sphere_point in sphere.V]
 
     # optimizer creation
     optimizer = Optimizer(
@@ -110,16 +114,16 @@ def make_surface(molecule, split_times=6):
     start_time = time.time()
 
     optimizer.optimize(
-        Nsteps=10000,
-        time_step=1e-1,
-        lambd=0.5,
-        close_atoms_ratio=1.35,
-        comp_f_ratio=0.3,
+        Nsteps=n_steps,
+        time_step=time_step,
+        lambd=lambda_k,
+        close_atoms_ratio=close_atoms_ratio,
+        comp_f_ratio=comp_f_ratio,
         # comp_f_ratio=1.,
-        patience=50,
-        last_weight=0.9,
-        accuracy_degree=3,
-        doorstep_accuracy=1e-7
+        patience=patience,
+        last_weight=last_weight,
+        accuracy_degree=accuracy_degree,
+        doorstep_accuracy=doorstep_accuracy
     )
     # optional
     print(f"\nTime passed: {time.time() - start_time}")

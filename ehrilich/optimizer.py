@@ -13,7 +13,7 @@ ATOM_COLOR = {
 }
 
 
-class BaseOptimizer:
+class Optimizer:
     def __init__(
             self,
             atoms,
@@ -39,6 +39,9 @@ class BaseOptimizer:
         self.adj = torch.tensor(self.parse_adj(adj)).to(self.device)
 
         self.avg_force_array = []
+
+        self.target_edge_len = self.get_edge_len()
+        self.VWR = 3 * 2.1
 
     def parse_adj(self, adj):
         max_adj = max([len(neib) for neib in adj])
@@ -73,29 +76,6 @@ class BaseOptimizer:
 
         return np.mean(lens)
 
-
-class Optimizer(BaseOptimizer):
-    def __init__(
-            self,
-            atoms,
-            labels,
-            V,
-            adj,
-            gpu=False,
-            history=None,
-    ):
-        super().__init__(
-            atoms,
-            labels,
-            V,
-            adj,
-            gpu,
-            history
-        )
-
-        self.target_edge_len = self.get_edge_len()
-        self.VWR = 3 * 2.1
-
     def add_history(self, avg_force, patience, last_weight):
 
         # [0] - force
@@ -126,7 +106,7 @@ class Optimizer(BaseOptimizer):
             for step_idx in range(len(self.history[3]), this_step):
                 self.history[3].append(sum(self.history[2][step_idx - patience: step_idx]) / patience)
 
-    def shrink(self, Nsteps, time_step, lambd, close_atoms_ratio, comp_f_ratio, patience, last_weight, accuracy_degree,
+    def shrink(self, Nsteps, time_step, lambda_k, close_atoms_ratio, comp_f_ratio, patience, last_weight, accuracy_degree,
                doorstep_accuracy):
         neibs_pad_mask = (self.adj != -1).float()  # v, neibs
         prev_force, prev_edge_grad, _ = self.interaction_gradients(close_atoms_ratio, neibs_pad_mask, comp_f_ratio)
@@ -137,8 +117,8 @@ class Optimizer(BaseOptimizer):
         while self.n < Nsteps + 1:
             current_force, current_edge_grad, avg_force = self.interaction_gradients(close_atoms_ratio, neibs_pad_mask,
                                                                                      comp_f_ratio)
-            current_force = lambd * current_force + (1 - lambd) * prev_force
-            current_edge_grad = lambd * current_edge_grad + (1 - lambd) * prev_edge_grad
+            current_force = lambda_k * current_force + (1 - lambda_k) * prev_force
+            current_edge_grad = lambda_k * current_edge_grad + (1 - lambda_k) * prev_edge_grad
 
             # step
             self.V -= time_step * current_force
@@ -155,7 +135,8 @@ class Optimizer(BaseOptimizer):
             self.n += 1
 
             if self.n % 20 == 0:
-                save_data(f"/home/gleb/sasa/data buffer/{pdb_name}/ponts/", f"step{self.n}", self.V)
+                # save_data(f"/home/gleb/sasa/data buffer/{pdb_name}/ponts/", f"step{self.n}", self.V)
+                pass
 
             if self.n > patience:
                 if abs(self.history[3][-1]) < doorstep_accuracy and this_degree < accuracy_degree:
