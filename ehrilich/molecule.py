@@ -2,6 +2,8 @@ import os.path
 
 import numpy as np
 
+from ehrilich.utils.plane_utils import delete_unimportant
+
 
 class Atom:
     """
@@ -27,13 +29,16 @@ class Atom:
 
 
 class Molecule:
-    def __init__(self, atoms: list[Atom]):
-        self.atoms = atoms
+    def __init__(self, atoms: list):
+        self.atoms = atoms.copy()
         self.coords = self.__get_coords(atoms)
         self.original_mol = None
 
     def __iter__(self):
         return iter(self.atoms)
+
+    def __getitem__(self, item: int):
+        return self.atoms[item]
 
     @staticmethod
     def __get_coords(atoms):
@@ -46,7 +51,7 @@ class Molecule:
     def get_radius(self):
         max_atom_distance = 0.
         for atom in self.atoms:
-            max_atom_distance = max(np.linalg.norm(atom), max_atom_distance)
+            max_atom_distance = max(np.linalg.norm(atom.coords), max_atom_distance)
         return max_atom_distance
 
     def get_coords(self):
@@ -59,7 +64,7 @@ class Molecule:
 
     # TODO: write realization
     def sparse(self):
-        pass
+        delete_unimportant(self.coords)
 
 
 # TODO: implement 2-nd parser type

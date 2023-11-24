@@ -39,12 +39,13 @@ class Point:
 
 
 class MoleculeSurface:
-    def __init__(self, points):
+    def __init__(self, points, bonds):
         self.__molecule = None
         self.points = points
-        self.bounds = self.parse_points_bounds()
+        # self.bonds = self.parse_points_bonds()
+        self.bonds = bonds
 
-    def parse_points_bounds(self):
+    def parse_points_bonds(self):
         bounds = []
         for point in self.points:
             bounds.append(point.neighbors_points_idx)
@@ -62,13 +63,6 @@ class MoleculeSurface:
         with open(path, 'wb') as handle:
             pickle.dump(self, handle)
 
-    def load(self, path):
-        with open(path, 'rb') as handle:
-            mol_surface = pickle.load(handle)
-            self.molecule = mol_surface.molecule
-            self.points = self.points
-            self.bounds = self.bounds
-
     def project(self):
         if self.__molecule is None:
             raise RuntimeError("molecule is None")
@@ -80,6 +74,11 @@ class MoleculeSurface:
             best_atom_idx = list(dists.keys())[0]
             point.atom_idx = best_atom_idx
             self.molecule[best_atom_idx] = point_idx
+
+
+def load(path):
+    with open(path, 'rb') as handle:
+        return pickle.load(handle)
 
 
 def make_surface(
@@ -116,7 +115,7 @@ def make_surface(
     optimizer.optimize(
         Nsteps=n_steps,
         time_step=time_step,
-        lambd=lambda_k,
+        lambda_k=lambda_k,
         close_atoms_ratio=close_atoms_ratio,
         comp_f_ratio=comp_f_ratio,
         # comp_f_ratio=1.,
@@ -138,6 +137,6 @@ def make_surface(
             neighbors_points_idx=sphere.adj[point_idx],
         ))
 
-    molecule_surface = MoleculeSurface(points)
+    molecule_surface = MoleculeSurface(points, sphere.adj)
     molecule_surface.molecule = molecule
-    return molecule
+    return molecule_surface
