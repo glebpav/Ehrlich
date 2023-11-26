@@ -66,14 +66,15 @@ class MoleculeSurface:
     def project(self):
         if self.__molecule is None:
             raise RuntimeError("molecule is None")
-
+        print("here")
         for point_idx, point in enumerate(self.points):
-            dists = {idx: get_dist(mol_point.shrinked_coords, point.shrinked_coords)
+            print(f"passed: {point_idx} of {len(self.points)}")
+            dists = {idx: get_dist(mol_point.coords, point.shrunk_coords)
                      for idx, mol_point in enumerate(self.molecule)}
             dists = {k: v for k, v in sorted(dists.items(), key=lambda item: item[1])}
             best_atom_idx = list(dists.keys())[0]
             point.atom_idx = best_atom_idx
-            self.molecule[best_atom_idx] = point_idx
+            self.molecule[best_atom_idx].point = point_idx
 
 
 def load(path):

@@ -10,7 +10,6 @@ from decimal import Decimal
 from decimal import *
 
 # radius
-from ehrilich import DEBUG_MODE
 
 water_radius = 1.4
 atom_radius = 2.1
@@ -373,8 +372,8 @@ def delete_unimportant(coords):
     for currentZ in drange(Decimal(min_z), Decimal(max_z), z_step):
 
         current_frame = Frame(max_x - min_x + error, max_y - min_y + error, lower_step_x, min_x, min_y)
-        if DEBUG_MODE:
-            print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
+
+        print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
 
         for point in points:
             if (point.z > currentZ > (point.z - point.radius)) or (point.z < currentZ < point.z + point.radius):
@@ -389,8 +388,7 @@ def delete_unimportant(coords):
         frame.paint_frames()
         cells_for_water = round(water_radius / frame.grid_step)
 
-        if DEBUG_MODE:
-            print(idx, "out of:", count_of_levels)
+        print(idx, "out of:", count_of_levels)
 
         if frame.has_atoms_in_frame():
             for x_idx in range(frame.min_x_for_atom - cells_for_water - 1, frame.max_x_for_atom + cells_for_water + 1,
@@ -423,9 +421,8 @@ def delete_unimportant(coords):
 
     out_atoms = np.array(out_atoms)
 
-    if DEBUG_MODE:
-        print(f"Before optimizing: {len(coords)}")
-        print(f"After optimizing: {len(out_atoms)}")
-        print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
+    print(f"Before optimizing: {len(coords)}")
+    print(f"After optimizing: {len(out_atoms)}")
+    print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
 
     return saved_idxs
