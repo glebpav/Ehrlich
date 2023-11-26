@@ -64,7 +64,10 @@ class Molecule:
 
     # TODO: write realization
     def sparse(self):
-        delete_unimportant(self.coords)
+        saved_idx = delete_unimportant(self.coords)
+        new_molecule = Molecule([atom for atom_idx, atom in enumerate(self.atoms) if atom_idx in saved_idx])
+        new_molecule.original_mol = self
+        return new_molecule
 
 
 # TODO: implement 2-nd parser type

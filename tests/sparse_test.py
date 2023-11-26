@@ -5,4 +5,7 @@ print(f"molecule coords:\n{molecule.coords}")
 print(f"molecule radius: {molecule.get_radius()}")
 print(f"count of atoms: {len(molecule.coords)}")
 
-molecule.sparse()
+new_molecule = molecule.sparse()
+print(f"new molecule coords: {new_molecule.coords}")
+print(f"new molecule atoms count: {len(new_molecule.coords)}")
+

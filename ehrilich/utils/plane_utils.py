@@ -9,7 +9,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from decimal import Decimal
 from decimal import *
 
-# radius es
+# radius
+from ehrilich import DEBUG_MODE
 
 water_radius = 1.4
 atom_radius = 2.1
@@ -132,10 +133,10 @@ class Frame(object):
             x, y = self.get_grid_point(x, y)
             self.grid[x, y] = 1
 
-    def is_point_in_circle(self, pointPos, circlePos, radius, accountConture=False):
-        dx = pointPos[0] - circlePos[0]
-        dy = pointPos[1] - circlePos[1]
-        if accountConture:
+    def is_point_in_circle(self, point_pos, circle_pos, radius, account_contre=False):
+        dx = point_pos[0] - circle_pos[0]
+        dy = point_pos[1] - circle_pos[1]
+        if account_contre:
             if dx ** 2 + dy ** 2 < (radius + error) ** 2:
                 return True
         else:
@@ -143,139 +144,142 @@ class Frame(object):
                 return True
         return False
 
-    def getCoordinatesByIdxs(self, idx_x, idx_y):
+    def get_coordinates_by_idxs(self, idx_x, idx_y):
         if idx_x >= len(self.ruler_x) or idx_y >= len(self.ruler_y) or idx_x < 0 or idx_y < 0:
-            return (0, 0)
-        return (self.ruler_x[idx_x], self.ruler_y[idx_y])
+            return 0, 0
+        return self.ruler_x[idx_x], self.ruler_y[idx_y]
 
-    def isMoleculeContainContuer(self, moleculePos, moleculeRadius):
+    def is_molecule_contain_contur(self, molecule_pos, molecule_radius):
 
-        beginWithX, beginWithY = self.get_grid_point(moleculePos[0] - moleculeRadius - error,
-                                                     moleculePos[1] - moleculeRadius - error)
-        endWithX, endWithY = self.get_grid_point(moleculePos[0] + moleculeRadius + error,
-                                                 moleculePos[1] + moleculeRadius + error)
+        begin_with_x, begin_with_y = self.get_grid_point(molecule_pos[0] - molecule_radius - error,
+                                                         molecule_pos[1] - molecule_radius - error)
+        end_with_x, end_with_y = self.get_grid_point(molecule_pos[0] + molecule_radius + error,
+                                                     molecule_pos[1] + molecule_radius + error)
 
-        for x_idx in range(beginWithX, endWithX):
-            for y_idx in range(beginWithY, endWithY):
+        for x_idx in range(begin_with_x, end_with_x):
+            for y_idx in range(begin_with_y, end_with_y):
                 if self.grid[x_idx, y_idx] == 1:
-                    x, y = self.getCoordinatesByIdxs(x_idx, y_idx)
-                    dx = moleculePos[0] - x
-                    dy = moleculePos[1] - y
-                    if dx ** 2 + dy ** 2 < (moleculeRadius + error) ** 2:
+                    x, y = self.get_coordinates_by_idxs(x_idx, y_idx)
+                    dx = molecule_pos[0] - x
+                    dy = molecule_pos[1] - y
+                    if dx ** 2 + dy ** 2 < (molecule_radius + error) ** 2:
                         return True
 
         return False
 
-    def paintFrameWithCircle(self, circlePos, radius):
+    def paint_frame_with_circle_reworked(self, circle_pos, radius):
 
-        beginWithX, beginWithY = self.get_grid_point(circlePos[0] - radius - error, circlePos[1] - radius - error)
-        endWithX, endWithY = self.get_grid_point(circlePos[0] + radius + error, circlePos[1] + radius + error)
+        begin_with_x, begin_with_y = self.get_grid_point(circle_pos[0] - radius - error, circle_pos[1] - radius - error)
+        end_with_x, end_with_y = self.get_grid_point(circle_pos[0] + radius + error, circle_pos[1] + radius + error)
 
-        for x_idx in range(beginWithX, endWithX + 1):
-            for y_idx in range(beginWithY, endWithY + 1):
-                x, y = self.getCoordinatesByIdxs(x_idx, y_idx)
-                dx = circlePos[0] - x
-                dy = circlePos[1] - y
-                if self.is_point_in_circle((x, y), circlePos, radius):
-                    self.grid[x_idx, y_idx] = 2
-
-    def paintFrameWithCircleReworked(self, circlePos, radius):
-
-        beginWithX, beginWithY = self.get_grid_point(circlePos[0] - radius - error, circlePos[1] - radius - error)
-        endWithX, endWithY = self.get_grid_point(circlePos[0] + radius + error, circlePos[1] + radius + error)
-
-        for x_idx in range(beginWithX, endWithX):
-            for y_idx in range(beginWithY, endWithY):
+        for x_idx in range(begin_with_x, end_with_x):
+            for y_idx in range(begin_with_y, end_with_y):
                 if self.grid[x_idx, y_idx] == 2:
                     continue
-                x, y = self.getCoordinatesByIdxs(x_idx, y_idx)
-                dx = circlePos[0] - x
-                dy = circlePos[1] - y
-                if self.is_point_in_circle((x, y), circlePos, radius):
+                x, y = self.get_coordinates_by_idxs(x_idx, y_idx)
+                dx = circle_pos[0] - x
+                dy = circle_pos[1] - y
+                if self.is_point_in_circle((x, y), circle_pos, radius):
                     self.grid[x_idx, y_idx] = 2
 
-    def paintFrameWithCircleReworked2(self, circlePos, radius):
+    def paint_frame_with_circle_reworked2(self, circle_pos, radius):
 
-        countOfColumns = self.get_grid_point(0, circlePos[1] + radius)[1] - self.get_grid_point(0, circlePos[1])[1]
+        count_of_columns = self.get_grid_point(0, circle_pos[1] + radius)[1] - self.get_grid_point(0, circle_pos[1])[1]
 
-        maxValue = radius
-        startX = self.get_grid_point(circlePos[0] - maxValue, 0, only_x=True)[0]
-        endX, y = self.get_grid_point(circlePos[0] + maxValue, circlePos[1])
+        max_value = radius
+        start_x = self.get_grid_point(circle_pos[0] - max_value, 0, only_x=True)[0]
+        end_x, y = self.get_grid_point(circle_pos[0] + max_value, circle_pos[1])
 
-        self.grid[startX: endX, y] = 2
+        self.grid[start_x: end_x, y] = 2
 
-        for i in range(1, countOfColumns):
-            maxValue = math.cos(math.pi * i / countOfColumns) * radius
-            startX = self.get_grid_point(circlePos[0] - maxValue, 0, only_x=True)[0]
-            endX = self.get_grid_point(circlePos[0] + maxValue, 0, only_x=True)[0]
+        for i in range(1, count_of_columns):
+            max_value = math.cos(math.pi * i / count_of_columns) * radius
+            start_x = self.get_grid_point(circle_pos[0] - max_value, 0, only_x=True)[0]
+            end_x = self.get_grid_point(circle_pos[0] + max_value, 0, only_x=True)[0]
 
-            self.grid[startX: endX, y + i] = 2
-            self.grid[startX: endX, y - i] = 2
+            self.grid[start_x: end_x, y + i] = 2
+            self.grid[start_x: end_x, y - i] = 2
 
-    def clearConture(self):
+    def clear_contur(self):
         for x_idx in range(len(self.grid)):
             for y_idx in range(len(self.grid[x_idx])):
                 if self.grid[x_idx, y_idx] == 1:
                     self.grid[x_idx, y_idx] = 0
 
     def countWaterNeighbors(self, x_idx, y_idx):
-        neighborsCount = 0
+        neighbors_count = 0
 
-        maxX = len(self.grid)
-        maxY = len(self.grid[0])
+        max_x = len(self.grid)
+        max_y = len(self.grid[0])
 
-        if (x_idx - 1 >= 0 and y_idx - 1 >= 0):
-            if self.grid[x_idx - 1, y_idx - 1] == 2: neighborsCount += 1
-        if (y_idx - 1 >= 0):
-            if self.grid[x_idx, y_idx - 1] == 2: neighborsCount += 1
-        if (x_idx + 1 < maxX and y_idx - 1 >= 0):
-            if self.grid[x_idx + 1, y_idx - 1] == 2: neighborsCount += 1
+        if x_idx - 1 >= 0 and y_idx - 1 >= 0:
+            if self.grid[x_idx - 1, y_idx - 1] == 2:
+                neighbors_count += 1
+        if y_idx - 1 >= 0:
+            if self.grid[x_idx, y_idx - 1] == 2:
+                neighbors_count += 1
+        if x_idx + 1 < max_x and y_idx - 1 >= 0:
+            if self.grid[x_idx + 1, y_idx - 1] == 2:
+                neighbors_count += 1
 
-        if (x_idx - 1 >= 0):
-            if self.grid[x_idx - 1, y_idx] == 2: neighborsCount += 1
-        if (x_idx + 1 < maxX):
-            if self.grid[x_idx + 1, y_idx] == 2: neighborsCount += 1
+        if x_idx - 1 >= 0:
+            if self.grid[x_idx - 1, y_idx] == 2:
+                neighbors_count += 1
+        if x_idx + 1 < max_x:
+            if self.grid[x_idx + 1, y_idx] == 2:
+                neighbors_count += 1
 
-        if (x_idx - 1 >= 0 and y_idx + 1 < maxY):
-            if self.grid[x_idx - 1, y_idx + 1] == 2: neighborsCount += 1
-        if (y_idx + 1 < maxY):
-            if self.grid[x_idx, y_idx + 1] == 2: neighborsCount += 1
-        if (x_idx + 1 < maxX and y_idx + 1 < maxY):
-            if self.grid[x_idx + 1, y_idx + 1] == 2: neighborsCount += 1
+        if x_idx - 1 >= 0 and y_idx + 1 < max_y:
+            if self.grid[x_idx - 1, y_idx + 1] == 2:
+                neighbors_count += 1
+        if y_idx + 1 < max_y:
+            if self.grid[x_idx, y_idx + 1] == 2:
+                neighbors_count += 1
+        if x_idx + 1 < max_x and y_idx + 1 < max_y:
+            if self.grid[x_idx + 1, y_idx + 1] == 2:
+                neighbors_count += 1
 
-        return neighborsCount
+        return neighbors_count
 
-    def countMarkedPoint(self, x_idx, y_idx, mark):
-        neighborsCount = 0
+    def count_marked_point(self, x_idx, y_idx, mark):
+        neighbors_count = 0
 
-        maxX = len(self.grid)
-        maxY = len(self.grid[0])
+        max_x = len(self.grid)
+        max_y = len(self.grid[0])
 
-        if (x_idx - 1 >= 0 and y_idx - 1 >= 0):
-            if self.grid[x_idx - 1, y_idx - 1] == mark: neighborsCount += 1
-        if (y_idx - 1 >= 0):
-            if self.grid[x_idx, y_idx - 1] == mark: neighborsCount += 1
-        if (x_idx + 1 < maxX and y_idx - 1 >= 0):
-            if self.grid[x_idx + 1, y_idx - 1] == mark: neighborsCount += 1
+        if x_idx - 1 >= 0 and y_idx - 1 >= 0:
+            if self.grid[x_idx - 1, y_idx - 1] == mark:
+                neighbors_count += 1
+        if y_idx - 1 >= 0:
+            if self.grid[x_idx, y_idx - 1] == mark:
+                neighbors_count += 1
+        if x_idx + 1 < max_x and y_idx - 1 >= 0:
+            if self.grid[x_idx + 1, y_idx - 1] == mark:
+                neighbors_count += 1
 
-        if (x_idx - 1 >= 0):
-            if self.grid[x_idx - 1, y_idx] == mark: neighborsCount += 1
-        if (x_idx + 1 < maxX):
-            if self.grid[x_idx + 1, y_idx] == mark: neighborsCount += 1
+        if x_idx - 1 >= 0:
+            if self.grid[x_idx - 1, y_idx] == mark:
+                neighbors_count += 1
+        if x_idx + 1 < max_x:
+            if self.grid[x_idx + 1, y_idx] == mark:
+                neighbors_count += 1
 
-        if (x_idx - 1 >= 0 and y_idx + 1 < maxY):
-            if self.grid[x_idx - 1, y_idx + 1] == mark: neighborsCount += 1
-        if (y_idx + 1 < maxY):
-            if self.grid[x_idx, y_idx + 1] == mark: neighborsCount += 1
-        if (x_idx + 1 < maxX and y_idx + 1 < maxY):
-            if self.grid[x_idx + 1, y_idx + 1] == mark: neighborsCount += 1
+        if x_idx - 1 >= 0 and y_idx + 1 < max_y:
+            if self.grid[x_idx - 1, y_idx + 1] == mark:
+                neighbors_count += 1
+        if y_idx + 1 < max_y:
+            if self.grid[x_idx, y_idx + 1] == mark:
+                neighbors_count += 1
+        if x_idx + 1 < max_x and y_idx + 1 < max_y:
+            if self.grid[x_idx + 1, y_idx + 1] == mark:
+                neighbors_count += 1
 
-        return neighborsCount
+        return neighbors_count
 
-    def hasAtomsInFrame(self):
+    def has_atoms_in_frame(self):
         return len(self.atomsInFrame) > 0
 
-    def findFinalConture(self):
+    def find_final_contur(self):
         for x_idx in range(len(self.grid)):
             for y_idx in range(len(self.grid[x_idx])):
                 if self.grid[x_idx, y_idx] == 0:
@@ -283,48 +287,48 @@ class Frame(object):
                     if 1 < neighbors:
                         self.grid[x_idx, y_idx] = 3
 
-    def findWaterOffset(self):
-        for offsetConture in range(math.ceil(water_radius / self.grid_step)):
+    def find_water_offset(self):
+        for offset_contur in range(math.ceil(water_radius / self.grid_step)):
             for x_idx in range(len(self.grid)):
                 for y_idx in range(len(self.grid[x_idx])):
                     if self.grid[x_idx, y_idx] == 0:
-                        neighbors = self.countMarkedPoint(x_idx, y_idx, offsetConture + 3)
+                        neighbors = self.count_marked_point(x_idx, y_idx, offset_contur + 3)
                         if 1 < neighbors:
-                            self.grid[x_idx, y_idx] = offsetConture + 4
+                            self.grid[x_idx, y_idx] = offset_contur + 4
 
         for x_idx in range(len(self.grid)):
             for y_idx in range(len(self.grid[x_idx])):
                 if self.grid[x_idx, y_idx] > 3:
                     self.grid[x_idx, y_idx] = 4
 
-    def paintFrames(self):
+    def paint_frames(self):
         if len(self.atomsInFrame) == 0:
             self.grid[:, :] = 2
             return
 
-        firstAtom = self.atomsInFrame[0]
-        self.min_x_for_atom = firstAtom.x - firstAtom.radius
-        self.max_x_for_atom = firstAtom.x + firstAtom.radius
-        self.min_y_for_atom = firstAtom.y - firstAtom.radius
-        self.max_y_for_atom = firstAtom.y + firstAtom.radius
+        first_atom = self.atomsInFrame[0]
+        self.min_x_for_atom = first_atom.x - first_atom.radius
+        self.max_x_for_atom = first_atom.x + first_atom.radius
+        self.min_y_for_atom = first_atom.y - first_atom.radius
+        self.max_y_for_atom = first_atom.y + first_atom.radius
 
         for atom in self.atomsInFrame:
-            subminXForAtom = atom.x - atom.radius
-            submaxXForAtom = atom.x + atom.radius
-            subminYForAtom = atom.y - atom.radius
-            submaxYForAtom = atom.y + atom.radius
+            submin_x_for_atom = atom.x - atom.radius
+            submax_x_for_atom = atom.x + atom.radius
+            submin_y_for_atom = atom.y - atom.radius
+            submax_y_for_atom = atom.y + atom.radius
 
-            if subminXForAtom < self.min_x_for_atom:
-                self.min_x_for_atom = subminXForAtom
+            if submin_x_for_atom < self.min_x_for_atom:
+                self.min_x_for_atom = submin_x_for_atom
 
-            if subminYForAtom < self.min_y_for_atom:
-                self.min_y_for_atom = subminYForAtom
+            if submin_y_for_atom < self.min_y_for_atom:
+                self.min_y_for_atom = submin_y_for_atom
 
-            if submaxXForAtom > self.max_x_for_atom:
-                self.max_x_for_atom = submaxXForAtom
+            if submax_x_for_atom > self.max_x_for_atom:
+                self.max_x_for_atom = submax_x_for_atom
 
-            if submaxYForAtom > self.max_y_for_atom:
-                self.max_y_for_atom = submaxYForAtom
+            if submax_y_for_atom > self.max_y_for_atom:
+                self.max_y_for_atom = submax_y_for_atom
 
         self.min_x_for_atom, self.min_y_for_atom = self.get_grid_point(self.min_x_for_atom, self.min_y_for_atom)
         self.max_x_for_atom, self.max_y_for_atom = self.get_grid_point(self.max_x_for_atom, self.max_y_for_atom)
@@ -369,7 +373,8 @@ def delete_unimportant(coords):
     for currentZ in drange(Decimal(min_z), Decimal(max_z), z_step):
 
         current_frame = Frame(max_x - min_x + error, max_y - min_y + error, lower_step_x, min_x, min_y)
-        print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
+        if DEBUG_MODE:
+            print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
 
         for point in points:
             if (point.z > currentZ > (point.z - point.radius)) or (point.z < currentZ < point.z + point.radius):
@@ -381,26 +386,27 @@ def delete_unimportant(coords):
     count_of_levels = len(levels)
     for idx, frame in enumerate(levels):
 
-        frame.paintFrames()
+        frame.paint_frames()
         cells_for_water = round(water_radius / frame.grid_step)
 
-        print(idx, "out of:", count_of_levels)
+        if DEBUG_MODE:
+            print(idx, "out of:", count_of_levels)
 
-        if frame.hasAtomsInFrame():
+        if frame.has_atoms_in_frame():
             for x_idx in range(frame.min_x_for_atom - cells_for_water - 1, frame.max_x_for_atom + cells_for_water + 1,
                                step_water_molecule):
 
-                # print(x_idx, "out of:", len(current_frame.grid))
-                for y_idx in range(frame.min_y_for_atom - cells_for_water - 1, frame.max_y_for_atom + cells_for_water + 1,
+                for y_idx in range(frame.min_y_for_atom - cells_for_water - 1,
+                                   frame.max_y_for_atom + cells_for_water + 1,
                                    step_water_molecule):
-                    x, y = frame.getCoordinatesByIdxs(x_idx, y_idx)
-                    if not frame.isMoleculeContainContuer((x, y), water_radius):
-                        frame.paintFrameWithCircleReworked((x, y), water_radius)
+                    x, y = frame.get_coordinates_by_idxs(x_idx, y_idx)
+                    if not frame.is_molecule_contain_contur((x, y), water_radius):
+                        frame.paint_frame_with_circle_reworked((x, y), water_radius)
 
-        frame.clearConture()
-        frame.findFinalConture()
+        frame.clear_contur()
+        frame.find_final_contur()
         for i in range(math.ceil(water_radius / frame.grid_step)):
-            frame.findWaterOffset()
+            frame.find_water_offset()
 
     protein_atoms = coords.copy()
     out_atoms = []
@@ -417,6 +423,9 @@ def delete_unimportant(coords):
 
     out_atoms = np.array(out_atoms)
 
-    print(f"Before optimizing: {len(coords)}")
-    print(f"After optimizing: {len(out_atoms)}")
-    print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
+    if DEBUG_MODE:
+        print(f"Before optimizing: {len(coords)}")
+        print(f"After optimizing: {len(out_atoms)}")
+        print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
+
+    return saved_idxs
