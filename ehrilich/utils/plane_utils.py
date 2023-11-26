@@ -56,17 +56,17 @@ class GirdPoint(object):
     def __str__(self):
         print(self.x, self.y, self.z, self.radius)
 
-    def addConnection(self, connection):
+    def add_connection(self, connection):
         if connection not in self.connections:
             self.connections.append(connection)
 
-    def getCountOfConnections(self):
+    def get_count_of_connections(self):
         return len(self.connections)
 
-    def getCountOfConnectionsOnItsLevel(self):
+    def get_count_of_connections_on_its_level(self):
         return self.connectionsOnItsLevel
 
-    def distanceToPoint(self, point):
+    def distance_to_point(self, point):
         dx = self.x - point.x
         dy = self.y - point.y
         dz = self.z - point.z
