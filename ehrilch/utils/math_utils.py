@@ -1,3 +1,5 @@
+import decimal
+
 import numpy as np
 
 
@@ -27,3 +29,9 @@ def get_center_coords(points):
         center_coords += point.origin_coords
     center_coords /= len(points)
     return center_coords
+
+
+def double_range(x, y, jump):
+    while x < y:
+        yield float(x)
+        x += decimal.Decimal(jump)

@@ -9,35 +9,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from decimal import Decimal
 from decimal import *
 
-# radius
-
-water_radius = 1.4
-atom_radius = 2.1
-
-# count of connections for each point
-connections_amount = 4
-
-#
-count_of_points_for_circle = 300
-step_water_molecule = 1
-
-# permissible error
-error = 0.009
-
-# by default x and z steps must be the same
-# because connections between points won't work correct
-z_step = 2.0
-x_step = 2.0
-
-MAX_VWR = 2.1
-
-lower_step_x = 1.4
-
-
-def drange(x, y, jump):
-    while x < y:
-        yield float(x)
-        x += decimal.Decimal(jump)
+from ehrilch.utils.math_utils import double_range
 
 
 class GirdPoint(object):
@@ -83,12 +55,15 @@ class Connection(object):
 
 class Frame(object):
 
-    def __init__(self, length, width, grid_step, min_x, min_y):
+    def __init__(self, length, width, grid_step, min_x, min_y, count_of_points_for_circle, error, water_radius):
         self.length = length
         self.width = width
         self.min_x = round(min_x, 3)
         self.min_y = round(min_y, 3)
         self.grid_step = grid_step
+        self.count_of_points_for_circle = count_of_points_for_circle
+        self.error = error
+        self.water_radius = water_radius
         self.max_chain_distance = grid_step * math.sqrt(2) + 0.003
         self.grid = np.zeros((round(length / grid_step), round(width / grid_step)), int)
         self.ruler_x = [self.min_x + step * grid_step for step in range(0, round(length / grid_step))]
@@ -125,7 +100,7 @@ class Frame(object):
         x, y = self.get_grid_point(center_pos[0], center_pos[1])
         self.grid[x, y] = 1
 
-        for point in drange(0, 2 * math.pi, (2 * math.pi) / count_of_points_for_circle / radius):
+        for point in double_range(0, 2 * math.pi, (2 * math.pi) / self.count_of_points_for_circle / radius):
             x = radius * math.sin(point) + center_pos[0]
             y = radius * math.cos(point) + center_pos[1]
 
@@ -136,10 +111,10 @@ class Frame(object):
         dx = point_pos[0] - circle_pos[0]
         dy = point_pos[1] - circle_pos[1]
         if account_contre:
-            if dx ** 2 + dy ** 2 < (radius + error) ** 2:
+            if dx ** 2 + dy ** 2 < (radius + self.error) ** 2:
                 return True
         else:
-            if dx ** 2 + dy ** 2 < (radius - error) ** 2:
+            if dx ** 2 + dy ** 2 < (radius - self.error) ** 2:
                 return True
         return False
 
@@ -150,10 +125,10 @@ class Frame(object):
 
     def is_molecule_contain_contur(self, molecule_pos, molecule_radius):
 
-        begin_with_x, begin_with_y = self.get_grid_point(molecule_pos[0] - molecule_radius - error,
-                                                         molecule_pos[1] - molecule_radius - error)
-        end_with_x, end_with_y = self.get_grid_point(molecule_pos[0] + molecule_radius + error,
-                                                     molecule_pos[1] + molecule_radius + error)
+        begin_with_x, begin_with_y = self.get_grid_point(molecule_pos[0] - molecule_radius - self.error,
+                                                         molecule_pos[1] - molecule_radius - self.error)
+        end_with_x, end_with_y = self.get_grid_point(molecule_pos[0] + molecule_radius + self.error,
+                                                     molecule_pos[1] + molecule_radius + self.error)
 
         for x_idx in range(begin_with_x, end_with_x):
             for y_idx in range(begin_with_y, end_with_y):
@@ -161,15 +136,17 @@ class Frame(object):
                     x, y = self.get_coordinates_by_idxs(x_idx, y_idx)
                     dx = molecule_pos[0] - x
                     dy = molecule_pos[1] - y
-                    if dx ** 2 + dy ** 2 < (molecule_radius + error) ** 2:
+                    if dx ** 2 + dy ** 2 < (molecule_radius + self.error) ** 2:
                         return True
 
         return False
 
     def paint_frame_with_circle_reworked(self, circle_pos, radius):
 
-        begin_with_x, begin_with_y = self.get_grid_point(circle_pos[0] - radius - error, circle_pos[1] - radius - error)
-        end_with_x, end_with_y = self.get_grid_point(circle_pos[0] + radius + error, circle_pos[1] + radius + error)
+        begin_with_x, begin_with_y = self.get_grid_point(circle_pos[0] - radius - self.error,
+                                                         circle_pos[1] - radius - self.error)
+        end_with_x, end_with_y = self.get_grid_point(circle_pos[0] + radius + self.error,
+                                                     circle_pos[1] + radius + self.error)
 
         for x_idx in range(begin_with_x, end_with_x):
             for y_idx in range(begin_with_y, end_with_y):
@@ -205,7 +182,7 @@ class Frame(object):
                 if self.grid[x_idx, y_idx] == 1:
                     self.grid[x_idx, y_idx] = 0
 
-    def countWaterNeighbors(self, x_idx, y_idx):
+    def count_water_neighbors(self, x_idx, y_idx):
         neighbors_count = 0
 
         max_x = len(self.grid)
@@ -282,12 +259,12 @@ class Frame(object):
         for x_idx in range(len(self.grid)):
             for y_idx in range(len(self.grid[x_idx])):
                 if self.grid[x_idx, y_idx] == 0:
-                    neighbors = self.countWaterNeighbors(x_idx, y_idx)
+                    neighbors = self.count_water_neighbors(x_idx, y_idx)
                     if 1 < neighbors:
                         self.grid[x_idx, y_idx] = 3
 
     def find_water_offset(self):
-        for offset_contur in range(math.ceil(water_radius / self.grid_step)):
+        for offset_contur in range(math.ceil(self.water_radius / self.grid_step)):
             for x_idx in range(len(self.grid)):
                 for y_idx in range(len(self.grid[x_idx])):
                     if self.grid[x_idx, y_idx] == 0:
@@ -342,87 +319,3 @@ class Frame(object):
 
         self.grid[0:self.min_x_for_atom, :] = 2
         self.grid[self.max_x_for_atom:-1, :] = 2
-
-
-def delete_unimportant(coords):
-    coords = np.array([[atom[0], atom[1], atom[2]] for atom in coords])
-    x = coords[:, 0]
-    y = coords[:, 1]
-    z = coords[:, 2]
-
-    max_radius = MAX_VWR
-
-    max_z = max(z) + max_radius + water_radius * 2
-    min_z = min(z) - max_radius - water_radius * 2
-
-    min_x = min(x) - max_radius - water_radius * 2
-    max_x = max(x) + max_radius + water_radius * 2
-
-    min_y = min(y) - max_radius - water_radius * 2
-    max_y = max(y) + max_radius + water_radius * 2
-
-    print(max_z, min_z, max_radius)
-
-    points = [GirdPoint(float(coord[0]), float(coord[1]), float(coord[2]), atom_radius) for coord in coords]
-
-    for idx, point in enumerate(points):
-        point.idx = idx
-
-    levels = []
-    for currentZ in drange(Decimal(min_z), Decimal(max_z), z_step):
-
-        current_frame = Frame(max_x - min_x + error, max_y - min_y + error, lower_step_x, min_x, min_y)
-
-        print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
-
-        for point in points:
-            if (point.z > currentZ > (point.z - point.radius)) or (point.z < currentZ < point.z + point.radius):
-                new_radius = ((point.radius ** 2) - ((currentZ - point.z) ** 2)) ** 0.5
-                current_frame.process_circle((point.x, point.y), new_radius)
-
-        levels.append(current_frame)
-
-    count_of_levels = len(levels)
-    for idx, frame in enumerate(levels):
-
-        frame.paint_frames()
-        cells_for_water = round(water_radius / frame.grid_step)
-
-        print(idx, "out of:", count_of_levels)
-
-        if frame.has_atoms_in_frame():
-            for x_idx in range(frame.min_x_for_atom - cells_for_water - 1, frame.max_x_for_atom + cells_for_water + 1,
-                               step_water_molecule):
-
-                for y_idx in range(frame.min_y_for_atom - cells_for_water - 1,
-                                   frame.max_y_for_atom + cells_for_water + 1,
-                                   step_water_molecule):
-                    x, y = frame.get_coordinates_by_idxs(x_idx, y_idx)
-                    if not frame.is_molecule_contain_contur((x, y), water_radius):
-                        frame.paint_frame_with_circle_reworked((x, y), water_radius)
-
-        frame.clear_contur()
-        frame.find_final_contur()
-        for i in range(math.ceil(water_radius / frame.grid_step)):
-            frame.find_water_offset()
-
-    protein_atoms = coords.copy()
-    out_atoms = []
-    saved_idxs = []
-    z_scale = (max_z - min_z) / len(levels)
-
-    for atom_idx, atom in enumerate(protein_atoms):
-        z_idx = math.floor((atom[2] - min_z) / z_scale)
-        frame = levels[z_idx]
-        x_idx, y_idx = frame.get_grid_point(atom[0], atom[1])
-        if frame.grid[x_idx, y_idx] != 0:
-            out_atoms.append(atom)
-            saved_idxs.append(atom_idx)
-
-    out_atoms = np.array(out_atoms)
-
-    print(f"Before optimizing: {len(coords)}")
-    print(f"After optimizing: {len(out_atoms)}")
-    print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
-
-    return saved_idxs

@@ -1,9 +1,9 @@
 import pickle
 import time
 
-from ehrilich.optimizer import Optimizer
-from ehrilich.sphere import Sphere
-from ehrilich.utils.math_utils import *
+from ehrilch.optimizer import Optimizer
+from ehrilch.sphere import Sphere
+from ehrilch.utils.math_utils import *
 
 
 class Point:
