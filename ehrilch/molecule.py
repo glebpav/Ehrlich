@@ -164,9 +164,6 @@ class Molecule(Sparsify):
         coords_list = [atom.coords for atom in atoms]
         return np.array(coords_list)
 
-    def __get_item(self, idx):
-        pass
-
     def get_radius(self):
         max_atom_distance = 0.
         for atom in self.atoms:
@@ -191,8 +188,6 @@ class Molecule(Sparsify):
 
 # TODO: implement 2-nd parser type
 def read_pdb(path):
-    if not os.path.exists(path):
-        raise FileNotFoundError
 
     with open(path) as f:
         lines = f.readlines()

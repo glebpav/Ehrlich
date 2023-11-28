@@ -46,10 +46,10 @@ class MoleculeSurface:
         self.bonds = bonds
 
     def parse_points_bonds(self):
-        bounds = []
+        bonds = []
         for point in self.points:
-            bounds.append(point.neighbors_points_idx)
-        return bounds
+            bonds.append(point.neighbors_points_idx)
+        return bonds
 
     @property
     def molecule(self):
