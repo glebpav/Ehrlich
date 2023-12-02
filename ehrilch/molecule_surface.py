@@ -1,5 +1,6 @@
 import pickle
 import time
+from functools import cached_property
 
 from ehrilch.optimizer import Optimizer
 from ehrilch.sphere import Sphere
@@ -75,6 +76,26 @@ class MoleculeSurface:
             best_atom_idx = list(dists.keys())[0]
             point.atom_idx = best_atom_idx
             self.molecule[best_atom_idx].point = point_idx
+
+    @cached_property
+    def get_average_shrunk_edge_len(self):
+        sum_len = 0
+        count = 0
+        for idx1, list_idxs in enumerate(self.bonds):
+            for idx2 in list_idxs:
+                sum_len += get_dist(self.points[idx1].origin_coords, self.points[idx2].origin_coords)
+                count += 1
+        return sum_len / count
+
+    @cached_property
+    def get_average_sphere_edge_len(self):
+        sum_len = 0
+        count = 0
+        for idx1, list_idxs in enumerate(self.bonds):
+            for idx2 in list_idxs:
+                sum_len += get_dist(self.points[idx1].shrunk_coords, self.points[idx2].shrunk_coords)
+                count += 1
+        return sum_len / count
 
 
 def load(path):
