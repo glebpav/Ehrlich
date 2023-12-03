@@ -32,9 +32,9 @@ class Segment:
         counter_result = {}
         score = 0
 
-        for acid, count in self.amines().items():
-            if acid in list(segment.amines().keys()):
-                counter_result[acid] = min(count, segment.amines()[acid])
+        for acid, count in self.amines.items():
+            if acid in list(segment.amines.keys()):
+                counter_result[acid] = min(count, segment.amines[acid])
                 score += counter_result[acid]
         return score, counter_result
 

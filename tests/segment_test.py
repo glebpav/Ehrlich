@@ -15,5 +15,9 @@ for segment in segment_list:
     print("\n")
 
 
+for idx in range(1, 10):
+    print(f"segment similarity {0} - {idx}: {segment_list[0].amin_similarity(segment_list[idx])}")
+
+
 
 

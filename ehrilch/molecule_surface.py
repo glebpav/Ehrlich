@@ -83,7 +83,7 @@ class MoleculeSurface:
         count = 0
         for idx1, list_idxs in enumerate(self.bonds):
             for idx2 in list_idxs:
-                sum_len += get_dist(self.points[idx1].origin_coords, self.points[idx2].origin_coords)
+                sum_len += get_dist(self.points[idx1].shrunk_coords, self.points[idx2].shrunk_coords)
                 count += 1
         return sum_len / count
 
@@ -93,12 +93,12 @@ class MoleculeSurface:
         count = 0
         for idx1, list_idxs in enumerate(self.bonds):
             for idx2 in list_idxs:
-                sum_len += get_dist(self.points[idx1].shrunk_coords, self.points[idx2].shrunk_coords)
+                sum_len += get_dist(self.points[idx1].origin_coords, self.points[idx2].origin_coords)
                 count += 1
         return sum_len / count
 
 
-def load_molecule_surface(path):
+def load_molecule_surface(path) -> MoleculeSurface:
     with open(path, 'rb') as handle:
         return pickle.load(handle)
 
