@@ -98,7 +98,7 @@ class MoleculeSurface:
         return sum_len / count
 
 
-def load(path):
+def load_molecule_surface(path):
     with open(path, 'rb') as handle:
         return pickle.load(handle)
 
@@ -115,7 +115,8 @@ def make_surface(
         patience=50,
         last_weight=0.9,
         accuracy_degree=3,
-        doorstep_accuracy=1e-7
+        doorstep_accuracy=1e-7,
+        gpu=False
 ):
     # sphere creation
     molecule_radius = molecule.get_radius()
@@ -129,7 +130,7 @@ def make_surface(
         labels=molecule.get_atoms_names(),
         V=sphere.V,
         adj=sphere.adj,
-        gpu=True
+        gpu=gpu
     )
 
     start_time = time.time()

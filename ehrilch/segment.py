@@ -5,24 +5,27 @@ from ehrilch import MoleculeSurface, get_rotated_vector, find_inside_cone_points
 
 
 class Segment:
-    def __init__(self, center_point, points):
+    def __init__(self, center_point, points, molecule):
         self.center_point = center_point
         self.points = points
-        self.molecule = None  # implement logic
-        self.segment_counter = None
+        self.molecule = molecule
 
     @cached_property
     def amines(self):
         used_idxs = {}
         segment_counter = {}
         for point in self.points:
-            if point.acid not in segment_counter:
-                segment_counter[point.acid] = 1
-                used_idxs[point.acid] = [point.atom_point_idx]
-            else:
-                if point.atom_point_idx not in used_idxs[point.acid]:
-                    segment_counter[point.acid] += 1
-                    used_idxs[point.acid].append(point.atom_point_idx)
+            if point.atom_idx is None:
+                print("surface points must be projected")
+                # raise Exception("surface points must be projected")
+                return None
+            acid = self.molecule.atoms[point.atom_idx].residue
+            if acid not in segment_counter:
+                segment_counter[acid] = 1
+                used_idxs[acid] = [point.atom_idx]
+            elif point.atom_idx not in used_idxs[acid]:
+                segment_counter[acid] += 1
+                used_idxs[acid].append(point.atom_idx)
         return segment_counter
 
     def amin_similarity(self, segment):
@@ -56,7 +59,7 @@ def make_sphere_segments(surface: MoleculeSurface, fi: float, k: float) -> list[
         if point_idx == 0:
             continue
         if point.origin_coords[2] < surface.points[start_point_idx].origin_coords[2]:
-            start_point_idx = point.idx
+            start_point_idx = point_idx
 
     min_z = surface.points[start_point_idx].origin_coords[2]
 
@@ -72,7 +75,8 @@ def make_sphere_segments(surface: MoleculeSurface, fi: float, k: float) -> list[
         for horizontal_step in range(int(modified_count_of_horizontal_steps)):
             segments_list.append(Segment(
                 center_vector.copy(),
-                find_inside_cone_points(surface.points, center_vector, central_angle)
+                [surface.points[idx] for idx in find_inside_cone_points(surface.points, center_vector, central_angle)],
+                surface.molecule
             ))
             center_vector = get_rotated_vector(center_vector, horizontal_angle_step, 'z')
         center_vector = get_rotated_vector(center_vector, vertical_angle_step, 'x')

@@ -29,7 +29,7 @@ class Optimizer:
         else:
             self.history = history
 
-        self.device = 'cuda:0' if gpu else 'cpu'
+        self.device = 'cuda' if gpu else 'cpu'
 
         self.atoms = torch.tensor(atoms).to(self.device)
         self.labels = labels
