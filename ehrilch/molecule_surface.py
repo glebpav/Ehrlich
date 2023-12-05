@@ -78,7 +78,7 @@ class MoleculeSurface:
             self.molecule[best_atom_idx].point = point_idx
 
     @cached_property
-    def get_average_shrunk_edge_len(self):
+    def average_shrunk_edge_len(self):
         sum_len = 0
         count = 0
         for idx1, list_idxs in enumerate(self.bonds):
@@ -88,7 +88,7 @@ class MoleculeSurface:
         return sum_len / count
 
     @cached_property
-    def get_average_sphere_edge_len(self):
+    def average_sphere_edge_len(self):
         sum_len = 0
         count = 0
         for idx1, list_idxs in enumerate(self.bonds):
@@ -96,6 +96,10 @@ class MoleculeSurface:
                 sum_len += get_dist(self.points[idx1].origin_coords, self.points[idx2].origin_coords)
                 count += 1
         return sum_len / count
+
+    def sphere_area(self, target_area):
+        return target_area * (self.average_sphere_edge_len / self.average_sphere_edge_len) ** 2
+
 
 
 def load_molecule_surface(path) -> MoleculeSurface:

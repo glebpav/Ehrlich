@@ -38,15 +38,21 @@ class Segment:
                 score += counter_result[acid]
         return score, counter_result
 
+# def get_target_fi()
 
-def make_sphere_segments(surface: MoleculeSurface, fi: float, k: float) -> list[Segment]:
+
+def make_sphere_segments(surface: MoleculeSurface, area: float, k: float) -> list[Segment]:
 
     """
     :param surface: MoleculeSurface object
-    :param fi: cone angle
+    :param area: area of each segment
     :param k: overlay of cone angles
     :return: list of found segments
     """
+
+    fi = math.degrees(math.acos(1 - area / (2 * math.pi * surface.molecule.get_radius() ** 2)))
+
+    print(fi)
 
     central_angle = fi
     vertical_angle_step = fi * k
