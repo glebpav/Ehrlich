@@ -50,7 +50,7 @@ def make_sphere_segments(surface: MoleculeSurface, area: float, k: float) -> lis
     :return: list of found segments
     """
 
-    fi = math.degrees(math.acos(1 - area / (2 * math.pi * surface.molecule.get_radius() ** 2)))
+    fi = math.degrees(math.acos(1 - area / (2 * math.pi * surface.sphere_radius ** 2)))
 
     print(fi)
 

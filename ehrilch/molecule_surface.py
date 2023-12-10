@@ -100,6 +100,12 @@ class MoleculeSurface:
     def sphere_area(self, target_area):
         return target_area * (self.average_sphere_edge_len / self.average_sphere_edge_len) ** 2
 
+    @cached_property
+    def sphere_radius(self):
+        norms = []
+        for point in self.points:
+            norms.append(np.linalg.norm(point.shrunk_coords))
+        return sum(norms) / len(norms)
 
 
 def load_molecule_surface(path) -> MoleculeSurface:
