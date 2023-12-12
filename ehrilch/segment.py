@@ -1,11 +1,11 @@
 import math
 from functools import cached_property
 
-from ehrilch import MoleculeSurface, get_rotated_vector, find_inside_cone_points
+from ehrilch import MoleculeSurface, get_rotated_vector, find_inside_cone_points, Point
 
 
 class Segment:
-    def __init__(self, center_point, points, molecule):
+    def __init__(self, center_point, points: list[Point], molecule):
         self.center_point = center_point
         self.points = points
         self.molecule = molecule
