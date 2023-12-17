@@ -2,6 +2,7 @@ import pickle
 import time
 from functools import cached_property
 
+from ehrilch import Molecule
 from ehrilch.optimizer import Optimizer
 from ehrilch.sphere import Sphere
 from ehrilch.utils.math_utils import *
@@ -28,7 +29,7 @@ class Point:
 
         # second env
         for neighbor_point_idx in self.neighbors_points_idx:
-            for second_neighbor_point_idx in mol_surface.points[neighbor_point_idx]:
+            for second_neighbor_point_idx in mol_surface.points[neighbor_point_idx].neighbors_points_idx:
                 if second_neighbor_point_idx in self.neighbors_points_idx:
                     continue
                 vect1 = mol_surface.points[second_neighbor_point_idx].shrunk_coords - self.shrunk_coords
@@ -42,7 +43,7 @@ class Point:
 class MoleculeSurface:
     def __init__(self, points, bonds):
         self.__molecule = None
-        self.points = points
+        self.points = points # list[Points]
         # self.bonds = self.parse_points_bonds()
         self.bonds = bonds
 
@@ -53,7 +54,7 @@ class MoleculeSurface:
         return bonds
 
     @property
-    def molecule(self):
+    def molecule(self) -> Molecule:
         return self.__molecule
 
     @molecule.setter
