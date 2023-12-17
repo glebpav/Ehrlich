@@ -19,31 +19,90 @@ class Point:
     # TODO: implement this method
     def compute_norm(self, mol_surface):
         if self.neighbors_points_idx is None:
-            raise RuntimeError("point has no neighbours")
+            return
+
+        # point_idx = mol_surface.points.index(self)
+        point_idx = -1
+        for idx, point in enumerate(mol_surface.points):
+            if point.origin_coords[0] == self.origin_coords[0] and point.origin_coords[1] == self.origin_coords[1]:
+                point_idx = idx
+                print(point_idx)
+                break
+        if point_idx == -1:
+            print("Error no such point")
+            return
+
+        env_by_levels = {level_idx: [] for level_idx in range(3)}
+        used_points = [point_idx]
+        for level_idx in range(3):
+            adj_points_idxs = []
+            for selected_point_idx in used_points:
+                adj_points_idxs += [adj_point_idx for adj_point_idx in mol_surface.points[selected_point_idx].neighbors_points_idx if
+                                    adj_point_idx not in used_points]
+
+            adj_points_idxs = list(set(adj_points_idxs))
+
+            # sorting by cw or ccw order
+            for idx1 in range(1, len(adj_points_idxs)):
+                for idx2 in range(idx1 + 1, len(adj_points_idxs)):
+                    dist1 = get_dist(mol_surface.points[adj_points_idxs[idx1 - 1]].origin_coords,
+                                     mol_surface.points[adj_points_idxs[idx2]].origin_coords)
+                    dist2 = get_dist(mol_surface.points[adj_points_idxs[idx1 - 1]].origin_coords,
+                                     mol_surface.points[adj_points_idxs[idx1]].origin_coords)
+                    if dist1 < dist2:
+                        temp = adj_points_idxs[idx1]
+                        adj_points_idxs[idx1] = adj_points_idxs[idx2]
+                        adj_points_idxs[idx2] = temp
+
+            # finding ccw order
+            vect1 = mol_surface.points[adj_points_idxs[0]].origin_coords - mol_surface.points[point_idx].origin_coords
+            vect2 = mol_surface.points[adj_points_idxs[1]].origin_coords - mol_surface.points[point_idx].origin_coords
+            res_vect = np.cross(vect1, vect2)
+            center_vector = mol_surface.points[point_idx].origin_coords
+
+            cos_a = np.dot(res_vect, center_vector) / (np.linalg.norm(res_vect) * np.linalg.norm(center_vector))
+
+            # 1 2 3 4 ...
+            if cos_a > 0:
+                vectors_sequence = list(range(len(adj_points_idxs)))
+            # n n-1 n-2 ...
+            else:
+                vectors_sequence = list(range(len(adj_points_idxs) - 1, -1, -1))
+
+            for idx, vector_idx in enumerate(vectors_sequence):
+                env_by_levels[level_idx].append(adj_points_idxs[vectors_sequence[idx]])
+            used_points += adj_points_idxs
 
         norm_components = []
-        # first env
-        for neighbor_point_idx in self.neighbors_points_idx:
-            vect1 = mol_surface.points[neighbor_point_idx].shrunk_coords - self.shrunk_coords
-            norm_components.append(get_norm(vect1))
+        for idx in range(1, len(env_by_levels[1])):
+            vect1 = mol_surface.points[env_by_levels[1][idx - 1]].origin_coords - self.origin_coords
+            vect2 = mol_surface.points[env_by_levels[1][idx]].origin_coords - self.origin_coords
+            res_vect = np.cross(vect1, vect2)
+            norm_components.append(get_norm(res_vect))
+        avg_adj_vect = np.average(np.array(norm_components), axis=0)
+        is_norm_inverted = get_cos(avg_adj_vect, self.origin_coords) > 0
 
-        # second env
-        for neighbor_point_idx in self.neighbors_points_idx:
-            for second_neighbor_point_idx in mol_surface.points[neighbor_point_idx].neighbors_points_idx:
-                if second_neighbor_point_idx in self.neighbors_points_idx:
-                    continue
-                vect1 = mol_surface.points[second_neighbor_point_idx].shrunk_coords - self.shrunk_coords
-                norm_components.append(vect1)
+        norm_components = []
+        for i in range(1, 3):
+            for idx in range(1, len(env_by_levels[i])):
+                vect1 = mol_surface.points[env_by_levels[i][idx - 1]].shrunk_coords - self.shrunk_coords
+                vect2 = mol_surface.points[env_by_levels[i][idx]].shrunk_coords - self.shrunk_coords
+                res_vect = np.cross(vect1, vect2)
+                norm_components.append(get_norm(res_vect))
 
         avg_adj_vect = np.average(np.array(norm_components), axis=0)
-        self.norm = get_norm(avg_adj_vect)
-        return self.norm
+        norm_avg = np.array(get_norm(avg_adj_vect))
+
+        if not is_norm_inverted:
+            norm_avg *= -1
+
+        return norm_avg
 
 
 class MoleculeSurface:
     def __init__(self, points, bonds):
         self.__molecule = None
-        self.points = points # list[Points]
+        self.points = points  # list[Points]
         # self.bonds = self.parse_points_bonds()
         self.bonds = bonds
 
