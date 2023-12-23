@@ -148,7 +148,7 @@ class Sparsify:
 
 
 class Molecule(Sparsify):
-    def __init__(self, atoms: list[Atom]):
+    def __init__(self, atoms):
         self.atoms = atoms.copy()
         self.coords = self.__get_coords(atoms)
         self.original_mol = None

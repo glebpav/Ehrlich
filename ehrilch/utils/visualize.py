@@ -70,7 +70,7 @@ class Visualize:
 
         converted_inside_cone_atoms_2 = [
             np.array(self.__convert_coord(
-                self.surface1.molecule.atoms[point.atom_idx].coords - self.offset_2,
+                self.surface2.molecule.atoms[point.atom_idx].coords - self.offset_2,
                 self.beta2, self.gamma2
             ))
             for point_idx, point in enumerate(self.surface2.points)
@@ -111,8 +111,14 @@ class Visualize:
         self.norm1 *= 5
         self.norm2 *= 5
 
+        print(f"origin norm1: {self.norm1}")
+        print(f"origin norm2: {self.norm2}")
+
         norm1 = self.__convert_coord(self.norm1, self.beta1, self.gamma1)
         norm2 = self.__convert_coord(self.norm2, self.beta2, self.gamma2)
+
+        print(f"converted norm1: {norm1}")
+        print(f"converted norm2: {norm2}")
 
         axis[0].quiver(0, 0, 0, norm1[0], norm1[1], norm1[2], color="red")
         axis[1].quiver(0, 0, 0, norm2[0], norm2[1], norm2[2], color="blue")
@@ -122,7 +128,7 @@ class Visualize:
         axis[1].scatter(X2, Y2, Z2, color=["blue"] * len(X2), alpha=opacity)
         axis[1].scatter(Xa2, Ya2, Za2, color=["black"] * len(X2), alpha=1)
 
-        plt.savefig('fig1.png')
+        plt.savefig('fig2.png')
         return figure
 
     def draw_align(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(10, 10)):
@@ -177,15 +183,22 @@ class Visualize:
         plt.savefig('fig1.png')
         return figure
 
-
     @staticmethod
     def __get_beta(point):
         a = (point[0] ** 2 + point[1] ** 2) ** 0.5
-        return math.asin(round(a / np.linalg.norm(point), 5))
+        if point[2] < 0:
+            return math.pi - math.asin(round(a / np.linalg.norm(point), 5))
+        else:
+            return math.asin(round(a / np.linalg.norm(point), 5))
 
     @staticmethod
     def __get_gamma(point):
-        if point[1] == 0: return math.pi / 2  # todo: check
+        if (point[1] * point[2] > 0 and (point[1] < 0 or point[0] < 0)) or (point[1] < 0 < point[2]):
+            return math.pi + math.atan(point[0] / point[1])
+        if (point[0] < 0 and point[1] > 0):
+            return math.fabs(math.atan(point[0] / point[1]))
+        if point[1] == 0:
+                return math.pi / 2  # todo: check
         return math.atan(point[0] / point[1])
 
     def __convert_coord(self, point, beta, gamma):

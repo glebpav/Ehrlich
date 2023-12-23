@@ -106,7 +106,8 @@ class Optimizer:
             for step_idx in range(len(self.history[3]), this_step):
                 self.history[3].append(sum(self.history[2][step_idx - patience: step_idx]) / patience)
 
-    def shrink(self, Nsteps, time_step, lambda_k, close_atoms_ratio, comp_f_ratio, patience, last_weight, accuracy_degree,
+    def shrink(self, Nsteps, time_step, lambda_k, close_atoms_ratio, comp_f_ratio, patience, last_weight,
+               accuracy_degree,
                doorstep_accuracy):
         neibs_pad_mask = (self.adj != -1).float()  # v, neibs
         prev_force, prev_edge_grad, _ = self.interaction_gradients(close_atoms_ratio, neibs_pad_mask, comp_f_ratio)
