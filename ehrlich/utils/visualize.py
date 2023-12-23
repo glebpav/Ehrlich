@@ -5,6 +5,16 @@ from matplotlib import pyplot as plt
 
 from ehrlich import MoleculeSurface, Point, find_inside_cone_points, get_rotated_vector
 
+ATOM_VWR = {
+    'C': 1.9080,
+    'H': 1.387,
+    'N': 1.8240,
+    'S': 2.0000,
+    'P': 2.1000,
+    'O': 1.6612,
+    'N1+': 1.8240
+}
+
 
 class Visualize:
     def __init__(
@@ -40,12 +50,31 @@ class Visualize:
         self.gamma1 = math.degrees(self.__get_gamma(self.norm1))
         self.gamma2 = math.degrees(self.__get_gamma(self.norm2))
 
+        # print(f"original norm 1: {self.norm1}")
+        # print(f"converted norm 1: {self.__convert_coord(self.norm1, self.beta1, self.gamma1)}")
+        # print()
+        # print(f"original norm 2: {self.norm2}")
+        # print(f"converted norm 2: {self.__convert_coord(self.norm2, self.beta2, self.gamma2)}")
+
     def draw_region(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(20, 10)):
         figure, axis = plt.subplots(1, 2, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=500)
+
         X1, Y1, Z1 = [], [], []
         Xa1, Ya1, Za1 = [], [], []
         X2, Y2, Z2 = [], [], []
         Xa2, Ya2, Za2 = [], [], []
+
+        residue_numbers_1 = set([
+            self.surface1.molecule.atoms[point.atom_idx].residue_num
+            for point_idx, point in enumerate(self.surface1.points)
+            if point_idx in self.inside_points_idxes_1
+        ])
+
+        residue_numbers_2 = set([
+            self.surface2.molecule.atoms[point.atom_idx].residue_num
+            for point_idx, point in enumerate(self.surface2.points)
+            if point_idx in self.inside_points_idxes_2
+        ])
 
         converted_inside_cone_points_1 = [
             np.array(self.__convert_coord(point.shrunk_coords - self.offset_1, self.beta1, self.gamma1))
@@ -59,7 +88,7 @@ class Visualize:
                 self.beta1, self.gamma1
             ))
             for point_idx, point in enumerate(self.surface1.points)
-            if point_idx in self.inside_points_idxes_1
+            if self.surface1.molecule.atoms[point.atom_idx].residue_num in residue_numbers_1
         ]
 
         converted_inside_cone_points_2 = [
@@ -74,7 +103,19 @@ class Visualize:
                 self.beta2, self.gamma2
             ))
             for point_idx, point in enumerate(self.surface2.points)
-            if point_idx in self.inside_points_idxes_2
+            if self.surface2.molecule.atoms[point.atom_idx].residue_num in residue_numbers_2
+        ]
+
+        radius_1 = [
+            ATOM_VWR[self.surface1.molecule.atoms[point.atom_idx].name] * 70
+            for point_idx, point in enumerate(self.surface1.points)
+            if self.surface1.molecule.atoms[point.atom_idx].residue_num in residue_numbers_1
+        ]
+
+        radius_2 = [
+            ATOM_VWR[self.surface2.molecule.atoms[point.atom_idx].name] * 70
+            for point_idx, point in enumerate(self.surface2.points)
+            if self.surface2.molecule.atoms[point.atom_idx].residue_num in residue_numbers_2
         ]
 
         for point in converted_inside_cone_points_1:
@@ -111,24 +152,45 @@ class Visualize:
         self.norm1 *= 5
         self.norm2 *= 5
 
-        print(f"origin norm1: {self.norm1}")
-        print(f"origin norm2: {self.norm2}")
-
         norm1 = self.__convert_coord(self.norm1, self.beta1, self.gamma1)
         norm2 = self.__convert_coord(self.norm2, self.beta2, self.gamma2)
-
-        print(f"converted norm1: {norm1}")
-        print(f"converted norm2: {norm2}")
 
         axis[0].quiver(0, 0, 0, norm1[0], norm1[1], norm1[2], color="red")
         axis[1].quiver(0, 0, 0, norm2[0], norm2[1], norm2[2], color="blue")
 
         axis[0].scatter(X1, Y1, Z1, color=["red"] * len(X1), alpha=opacity)
-        axis[0].scatter(Xa1, Ya1, Za1, color=["black"] * len(X1), alpha=1)
+        axis[0].scatter(Xa1, Ya1, Za1, color=["black"] * len(Xa1), alpha=1, s=radius_1)
         axis[1].scatter(X2, Y2, Z2, color=["blue"] * len(X2), alpha=opacity)
-        axis[1].scatter(Xa2, Ya2, Za2, color=["black"] * len(X2), alpha=1)
+        axis[1].scatter(Xa2, Ya2, Za2, color=["black"] * len(Xa2), alpha=1, s=radius_2)
 
-        plt.savefig('fig2.png')
+        for point_idx in self.inside_points_idxes_1:
+            for adj_point_idx in self.surface1.points[point_idx].neighbors_points_idx:
+
+                if adj_point_idx not in self.inside_points_idxes_1:
+                    continue
+
+                iv = self.surface1.points[point_idx].shrunk_coords
+                jv = self.surface1.points[adj_point_idx].shrunk_coords
+
+                iv = self.__convert_coord(iv - self.offset_1, self.beta1, self.gamma1)
+                jv = self.__convert_coord(jv - self.offset_1, self.beta1, self.gamma1)
+
+                axis[0].plot3D(*[a for a in zip(iv, jv)], color='#999', alpha=opacity)
+
+        for point_idx in self.inside_points_idxes_2:
+            for adj_point_idx in self.surface2.points[point_idx].neighbors_points_idx:
+
+                if adj_point_idx not in self.inside_points_idxes_2:
+                    continue
+
+                iv = self.surface2.points[point_idx].shrunk_coords
+                jv = self.surface2.points[adj_point_idx].shrunk_coords
+
+                iv = self.__convert_coord(iv - self.offset_2, self.beta2, self.gamma2)
+                jv = self.__convert_coord(jv - self.offset_2, self.beta2, self.gamma2)
+
+                axis[1].plot3D(*[a for a in zip(iv, jv)], color='#999', alpha=opacity)
+
         return figure
 
     def draw_align(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(10, 10)):
@@ -180,28 +242,31 @@ class Visualize:
         axis.scatter(X1, Y1, Z1, color=["red"] * len(X1), alpha=opacity)
         axis.scatter(X2, Y2, Z2, color=["blue"] * len(X2), alpha=opacity)
 
-        plt.savefig('fig1.png')
         return figure
 
     @staticmethod
     def __get_beta(point):
         a = (point[0] ** 2 + point[1] ** 2) ** 0.5
         if point[2] < 0:
-            return math.pi - math.asin(round(a / np.linalg.norm(point), 5))
+            return math.pi - math.asin(round(a / np.linalg.norm(point), 7))
         else:
-            return math.asin(round(a / np.linalg.norm(point), 5))
+            return math.asin(round(a / np.linalg.norm(point), 7))
 
     @staticmethod
     def __get_gamma(point):
-        if (point[1] * point[2] > 0 and (point[1] < 0 or point[0] < 0)) or (point[1] < 0 < point[2]):
+        if (point[1] * point[0] > 0.00000 and (point[1] < 0.000 or point[0] < 0.000000)) or (point[1] < 0.0000 and 0. < point[0]):
+            # print("here1")
             return math.pi + math.atan(point[0] / point[1])
-        if (point[0] < 0 and point[1] > 0):
-            return math.fabs(math.atan(point[0] / point[1]))
+        if point[0] < 0.000 and point[1] > 0.000:
+            # print("here")
+            # print(math.degrees(1. * math.pi - math.fabs(math.atan(point[0] / point[1]))))
+            return - math.fabs(math.atan(point[0] / point[1]))
         if point[1] == 0:
                 return math.pi / 2  # todo: check
         return math.atan(point[0] / point[1])
 
     def __convert_coord(self, point, beta, gamma):
         point1 = get_rotated_vector(point, -gamma, 'z')
+        # print(f"after gamma rotation: {point1}")
         point1 = get_rotated_vector(point1, -beta, 'x')
         return point1

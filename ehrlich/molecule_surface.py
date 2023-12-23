@@ -26,7 +26,7 @@ class Point:
         for idx, point in enumerate(mol_surface.points):
             if point.origin_coords[0] == self.origin_coords[0] and point.origin_coords[1] == self.origin_coords[1]:
                 point_idx = idx
-                print(point_idx)
+                # print(point_idx)
                 break
         if point_idx == -1:
             print("Error no such point")
