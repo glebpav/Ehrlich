@@ -2,10 +2,10 @@ import pickle
 import time
 from functools import cached_property
 
-from ehrilch import Molecule
-from ehrilch.optimizer import Optimizer
-from ehrilch.sphere import Sphere
-from ehrilch.utils.math_utils import *
+from ehrlich import Molecule
+from ehrlich.optimizer import Optimizer
+from ehrlich.sphere import Sphere
+from ehrlich.utils.math_utils import *
 
 
 class Point:

@@ -1,5 +1,5 @@
-from ehrilch.molecule import read_pdb
-from ehrilch.molecule_surface import make_surface
+from ehrlich.molecule import read_pdb
+from ehrlich.molecule_surface import make_surface
 
 pdb_name = "8sib.pdb"
 

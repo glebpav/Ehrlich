@@ -1,5 +1,5 @@
-from ehrilch import load_molecule_surface
-from ehrilch.segment import make_sphere_segments
+from ehrlich import load_molecule_surface
+from ehrlich.segment import make_sphere_segments
 
 pdb_name = '8sib'
 

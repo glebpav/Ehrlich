@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 
-from ehrilch.utils.math_utils import double_range
+from ehrlich.utils.math_utils import double_range
 
 
 class GirdPoint(object):

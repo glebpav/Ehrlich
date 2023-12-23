@@ -1,9 +1,9 @@
-import ehrilch
-from ehrilch import load_molecule_surface
-from ehrilch.utils.visualize import Visualize
+import ehrlich
+from ehrlich import load_molecule_surface
+from ehrlich.utils.visualize import Visualize
 
-"""molecule = ehrilch.read_pdb("../assets/4ins2.pdb")
-surface = ehrilch.make_surface(molecule)
+"""molecule = ehrlich.read_pdb("../assets/4ins2.pdb")
+surface = ehrlich.make_surface(molecule)
 surface.project()
 surface.save("../assets/molecule_surface/4ins2.pickle")"""
 

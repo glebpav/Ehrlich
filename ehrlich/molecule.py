@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import numpy as np
 
-from ehrilch.utils.math_utils import double_range
-from ehrilch.utils.plane_utils import GirdPoint, Frame
+from ehrlich.utils.math_utils import double_range
+from ehrlich.utils.plane_utils import GirdPoint, Frame
 
 
 class Atom:

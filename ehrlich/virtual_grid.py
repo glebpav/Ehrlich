@@ -2,7 +2,7 @@ import math
 import numpy as np
 from Bio.SubsMat import MatrixInfo
 
-from ehrilch import MoleculeSurface, get_rotated_vector, get_dist, get_norm, get_cos
+from ehrlich import MoleculeSurface, get_rotated_vector, get_dist, get_norm, get_cos
 
 
 class VirtualPoint:

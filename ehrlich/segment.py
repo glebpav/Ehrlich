@@ -1,7 +1,7 @@
 import math
 from functools import cached_property
 
-from ehrilch import MoleculeSurface, get_rotated_vector, find_inside_cone_points, Point
+from ehrlich import MoleculeSurface, get_rotated_vector, find_inside_cone_points, Point
 
 
 class Segment:

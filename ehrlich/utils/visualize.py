@@ -3,7 +3,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
-from ehrilch import MoleculeSurface, Point, find_inside_cone_points, get_rotated_vector
+from ehrlich import MoleculeSurface, Point, find_inside_cone_points, get_rotated_vector
 
 
 class Visualize:

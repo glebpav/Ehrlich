@@ -1,5 +1,5 @@
-from ehrilch import load_molecule_surface
-from ehrilch.virtual_grid import VirtualGrid
+from ehrlich import load_molecule_surface
+from ehrlich.virtual_grid import VirtualGrid
 
 molecule = load_molecule_surface(path="../assets/molecule_surface/8sib.pickle")
 

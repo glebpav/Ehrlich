@@ -1,4 +1,4 @@
-from ehrilch import load_molecule_surface
+from ehrlich import load_molecule_surface
 
 pdb_name = '8sib'
 

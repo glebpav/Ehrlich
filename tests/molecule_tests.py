@@ -1,4 +1,4 @@
-from ehrilch.molecule import read_pdb
+from ehrlich.molecule import read_pdb
 
 molecule = read_pdb("../assets/8sib.pdb")
 print(f"molecule coords:\n{molecule.coords}")
