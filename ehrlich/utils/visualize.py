@@ -56,8 +56,8 @@ class Visualize:
         # print(f"original norm 2: {self.norm2}")
         # print(f"converted norm 2: {self.__convert_coord(self.norm2, self.beta2, self.gamma2)}")
 
-    def draw_region(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(20, 10)):
-        figure, axis = plt.subplots(1, 2, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=500)
+    def draw_region(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(20, 10), dpi=300):
+        figure, axis = plt.subplots(1, 2, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=dpi)
 
         X1, Y1, Z1 = [], [], []
         Xa1, Ya1, Za1 = [], [], []
@@ -146,6 +146,17 @@ class Visualize:
         Y2 = np.array(Y2)
         Z2 = np.array(Z2)
 
+        max1 = max(np.abs(np.max(X1)), np.abs(np.max(Y1)), np.abs(np.max(Z1)))
+        max2 = max(np.abs(np.max(X2)), np.abs(np.max(Y2)), np.abs(np.max(Z2)))
+
+        axis[0].set_xlim([-max1, max1])
+        axis[0].set_ylim([-max1, max1])
+        axis[0].set_zlim([-max1, max1])
+
+        axis[1].set_xlim([-max2, max2])
+        axis[1].set_ylim([-max2, max2])
+        axis[1].set_zlim([-max2, max2])
+
         axis[0].view_init(elev=elevation, azim=azimuth, roll=0)
         axis[1].view_init(elev=elevation, azim=azimuth, roll=0)
 
@@ -158,10 +169,12 @@ class Visualize:
         axis[0].quiver(0, 0, 0, norm1[0], norm1[1], norm1[2], color="red")
         axis[1].quiver(0, 0, 0, norm2[0], norm2[1], norm2[2], color="blue")
 
+        axis[0].scatter(Xa1, Ya1, Za1, color=["#717171"] * len(Xa1), alpha=1,
+                        s=[(radius ** 2 * math.pi / 4) / (2 * max1) * (1 / 3) * fig_size[0] for radius in radius_1])
         axis[0].scatter(X1, Y1, Z1, color=["red"] * len(X1), alpha=opacity)
-        axis[0].scatter(Xa1, Ya1, Za1, color=["black"] * len(Xa1), alpha=1, s=radius_1)
+        axis[1].scatter(Xa2, Ya2, Za2, color=["#717171"] * len(Xa2), alpha=1,
+                        s=[(radius ** 2 * math.pi / 4) / (2 * max2) * (1 / 3) * fig_size[0] for radius in radius_2])
         axis[1].scatter(X2, Y2, Z2, color=["blue"] * len(X2), alpha=opacity)
-        axis[1].scatter(Xa2, Ya2, Za2, color=["black"] * len(Xa2), alpha=1, s=radius_2)
 
         for point_idx in self.inside_points_idxes_1:
             for adj_point_idx in self.surface1.points[point_idx].neighbors_points_idx:
@@ -175,7 +188,7 @@ class Visualize:
                 iv = self.__convert_coord(iv - self.offset_1, self.beta1, self.gamma1)
                 jv = self.__convert_coord(jv - self.offset_1, self.beta1, self.gamma1)
 
-                axis[0].plot3D(*[a for a in zip(iv, jv)], color='#999', alpha=opacity)
+                axis[0].plot3D(*[a for a in zip(iv, jv)], color='#8E0EFD', alpha=opacity)
 
         for point_idx in self.inside_points_idxes_2:
             for adj_point_idx in self.surface2.points[point_idx].neighbors_points_idx:
@@ -189,12 +202,12 @@ class Visualize:
                 iv = self.__convert_coord(iv - self.offset_2, self.beta2, self.gamma2)
                 jv = self.__convert_coord(jv - self.offset_2, self.beta2, self.gamma2)
 
-                axis[1].plot3D(*[a for a in zip(iv, jv)], color='#999', alpha=opacity)
+                axis[1].plot3D(*[a for a in zip(iv, jv)], color='#8E0EFD', alpha=opacity)
 
         return figure
 
-    def draw_align(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(10, 10)):
-        figure, axis = plt.subplots(1, 1, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=500)
+    def draw_align(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(10, 10), dpi=300):
+        figure, axis = plt.subplots(1, 1, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=dpi)
         X1, Y1, Z1 = [], [], []
         X2, Y2, Z2 = [], [], []
 
@@ -254,7 +267,8 @@ class Visualize:
 
     @staticmethod
     def __get_gamma(point):
-        if (point[1] * point[0] > 0.00000 and (point[1] < 0.000 or point[0] < 0.000000)) or (point[1] < 0.0000 and 0. < point[0]):
+        if (point[1] * point[0] > 0.00000 and (point[1] < 0.000 or point[0] < 0.000000)) or (
+                point[1] < 0.0000 and 0. < point[0]):
             # print("here1")
             return math.pi + math.atan(point[0] / point[1])
         if point[0] < 0.000 and point[1] > 0.000:
@@ -262,7 +276,7 @@ class Visualize:
             # print(math.degrees(1. * math.pi - math.fabs(math.atan(point[0] / point[1]))))
             return - math.fabs(math.atan(point[0] / point[1]))
         if point[1] == 0:
-                return math.pi / 2  # todo: check
+            return math.pi / 2  # todo: check
         return math.atan(point[0] / point[1])
 
     def __convert_coord(self, point, beta, gamma):
