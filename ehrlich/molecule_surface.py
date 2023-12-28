@@ -129,13 +129,17 @@ class MoleculeSurface:
             raise RuntimeError("molecule is None")
         print("here")
         for point_idx, point in enumerate(self.points):
-            print(f"passed: {point_idx} of {len(self.points)}")
-            dists = {idx: get_dist(mol_point.coords, point.shrunk_coords)
+            self.log(point_idx)
+            dists = {idx: get_dist(mol_point.coordinates, point.shrunk_coords)
                      for idx, mol_point in enumerate(self.molecule)}
             dists = {k: v for k, v in sorted(dists.items(), key=lambda item: item[1])}
             best_atom_idx = list(dists.keys())[0]
             point.atom_idx = best_atom_idx
             self.molecule[best_atom_idx].point = point_idx
+
+    def log(self, n):
+        r = int(30 * n / len(self.points))
+        print(f"\rProjecting: {n}/{len(self.points)} |{'=' * r}>{'.' * (30 - r)}|", end='')
 
     @cached_property
     def average_shrunk_edge_len(self):
@@ -196,7 +200,7 @@ def make_surface(
 
     # optimizer creation
     optimizer = Optimizer(
-        atoms=molecule.get_coords(),
+        atoms=molecule.get_coordinates(),
         labels=molecule.get_atoms_names(),
         V=sphere.V,
         adj=sphere.adj,

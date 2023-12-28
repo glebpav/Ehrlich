@@ -24,7 +24,7 @@ class Atom:
         :param z: z coordinate of atom
         """
         self.name = name
-        self.coords = np.array([x, y, z])
+        self.coordinates = np.array([x, y, z])
         self.idx = idx
         self.residue = residue
         self.residue_num = residue_num
@@ -150,7 +150,7 @@ class Sparsify:
 class Molecule(Sparsify):
     def __init__(self, atoms):
         self.atoms = atoms.copy()
-        self.coords = self.__get_coords(atoms)
+        self.coordinates = self.get_coordinates(atoms)
         self.original_mol = None
 
     def __iter__(self):
@@ -159,23 +159,20 @@ class Molecule(Sparsify):
     def __getitem__(self, item: int):
         return self.atoms[item]
 
-    @staticmethod
-    def __get_coords(atoms):
-        coords_list = [atom.coords for atom in atoms]
-        return np.array(coords_list)
+    def get_coordinates(self, atoms=None):
+        if atoms is None:
+            atoms = self.atoms
+        coordinates_list = [atom.coordinates for atom in atoms]
+        return np.array(coordinates_list)
 
     def get_radius(self):
         max_atom_distance = 0.
         for atom in self.atoms:
-            max_atom_distance = max(np.linalg.norm(atom.coords), max_atom_distance)
+            max_atom_distance = max(np.linalg.norm(atom.coordinates), max_atom_distance)
         return max_atom_distance
 
-    def get_coords(self):
-        coords = [atom.coords for atom in self.atoms]
-        return np.array(coords)
-
     def get_atoms_names(self):
-        names = [atom.name for atom in self.atoms]
+        names = [atom.name[0] for atom in self.atoms]
         return names
 
     """# TODO: write realization

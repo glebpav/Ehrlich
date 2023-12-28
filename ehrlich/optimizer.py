@@ -60,11 +60,11 @@ class Optimizer:
 
         self.shrink(**kwargs)
 
-        self.V += pgc
+        # self.V += pgc
 
     def log(self, n, Nsteps):
         r = int(30 * n / Nsteps)
-        print(f"\r{n}/{Nsteps} |{'=' * r}>{'.' * (30 - r)}|", end='')
+        print(f"\rShrinking: {n}/{Nsteps} |{'=' * r}>{'.' * (30 - r)}|", end='')
 
     def get_edge_len(self):
         lens = []

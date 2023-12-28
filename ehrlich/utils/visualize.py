@@ -120,7 +120,7 @@ class Visualize:
 
         converted_inside_cone_atoms_1 = [
             np.array(self.__convert_coord(
-                self.surface1.molecule.atoms[point.atom_idx].coords - self.offset_1,
+                self.surface1.molecule.atoms[point.atom_idx].coordinates - self.offset_1,
                 self.beta1, self.gamma1
             ))
             for point_idx, point in enumerate(self.surface1.points)
@@ -135,7 +135,7 @@ class Visualize:
 
         converted_inside_cone_atoms_2 = [
             np.array(self.__convert_coord(
-                self.surface2.molecule.atoms[point.atom_idx].coords - self.offset_2,
+                self.surface2.molecule.atoms[point.atom_idx].coordinates - self.offset_2,
                 self.beta2, self.gamma2
             ))
             for point_idx, point in enumerate(self.surface2.points)
