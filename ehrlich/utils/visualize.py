@@ -15,6 +15,42 @@ ATOM_VWR = {
     'N1+': 1.8240
 }
 
+acids_colors_map = {
+    'GLY': '#000080',
+    'LEU': '#00FF00',
+    'TUR': '#FFFF00',
+    'SER': '#800080',
+    'GLU': '#808000',
+    'GLN': '#6B8E23',
+    'ASP': '#FFA500',
+    'ASN': '#FF0000',
+    'PHE': '#FAEBD7',
+    'ALA': '#00FFFF',
+    'LYS': '#7FFFD4',
+    'ARG': '#F0FFFF',
+    'HIS': '#F5F5DC',
+    'CYS': '#FFE4C4',
+    'VAL': '#000000',
+    'PRO': '#FFEBCD',
+    'HYP': '#0000FF',
+    'TRP': '#8A2BE2',
+    'ILE': '#A52A2A',
+    'MET': '#DEB887',
+    'THR': '#5F9EA0',
+    'HYL': '#7FFF00',
+}
+
+unknown_color = '#44944a'
+
+
+def get_atom_color(acid):
+    if acids_colors_map.__contains__(acid):
+        return acids_colors_map[acid]
+    return unknown_color
+
+
+colors_list = list(acids_colors_map.values())
+
 
 class Visualize:
     def __init__(
@@ -166,13 +202,25 @@ class Visualize:
         norm1 = self.__convert_coord(self.norm1, self.beta1, self.gamma1)
         norm2 = self.__convert_coord(self.norm2, self.beta2, self.gamma2)
 
+        colors1 = [
+            get_atom_color(self.surface1.molecule.atoms[point.atom_idx].residue)
+            for point_idx, point in enumerate(self.surface1.points)
+            if self.surface1.molecule.atoms[point.atom_idx].residue_num in residue_numbers_1
+        ]
+
+        colors2 = [
+            get_atom_color(self.surface2.molecule.atoms[point.atom_idx].residue)
+            for point_idx, point in enumerate(self.surface2.points)
+            if self.surface2.molecule.atoms[point.atom_idx].residue_num in residue_numbers_2
+        ]
+
         axis[0].quiver(0, 0, 0, norm1[0], norm1[1], norm1[2], color="red")
         axis[1].quiver(0, 0, 0, norm2[0], norm2[1], norm2[2], color="blue")
 
-        axis[0].scatter(Xa1, Ya1, Za1, color=["#717171"] * len(Xa1), alpha=1,
+        axis[0].scatter(Xa1, Ya1, Za1, color=colors1, alpha=1,
                         s=[(radius ** 2 * math.pi / 4) / (2 * max1) * (1 / 3) * fig_size[0] for radius in radius_1])
         axis[0].scatter(X1, Y1, Z1, color=["red"] * len(X1), alpha=opacity)
-        axis[1].scatter(Xa2, Ya2, Za2, color=["#717171"] * len(Xa2), alpha=1,
+        axis[1].scatter(Xa2, Ya2, Za2, color=colors2, alpha=1,
                         s=[(radius ** 2 * math.pi / 4) / (2 * max2) * (1 / 3) * fig_size[0] for radius in radius_2])
         axis[1].scatter(X2, Y2, Z2, color=["blue"] * len(X2), alpha=opacity)
 

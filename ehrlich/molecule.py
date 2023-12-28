@@ -198,17 +198,14 @@ def read_pdb(path):
         if not line.startswith('ATOM'):
             continue
 
-        split_line = line.split()
+        atom_idx = int(line[6:11].strip()),  # Atom serial number
+        full_atom_name = line[12:16].strip(),  # Atom name
+        amino_acid = line[17:20].strip(),  # Residue name
+        amino_acid_idx = int(line[22:26].strip()),  # Residue sequence number
+        x = float(line[30:38].strip()),  # X
+        y = float(line[38:46].strip()),  # Y
+        z = float(line[46:54].strip()),  # Z
 
-        atom_idx = int(split_line[1])
-        full_atom_name = split_line[2]
-        atom_name = full_atom_name[0]
-        amino_acid = split_line[3]
-        amino_acid_idx = split_line[5]
-        x = float(split_line[6])
-        y = float(split_line[7])
-        z = float(split_line[8])
-
-        atoms_list.append(Atom(atom_idx, atom_name, amino_acid, amino_acid_idx, x, y, z))
+        atoms_list.append(Atom(atom_idx, full_atom_name[0], amino_acid, amino_acid_idx, x, y, z))
 
     return Molecule(atoms_list)
