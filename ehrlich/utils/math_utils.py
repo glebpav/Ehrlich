@@ -82,3 +82,9 @@ def find_inside_cone_points(points, center_vector, central_angle):
             list_inside_points_idxs.append(point_idx)
 
     return list_inside_points_idxs
+
+
+def log(label_text, this_value, max_value):
+    r = int(30 * this_value / max_value)
+    print(f"\r{label_text}: {this_value}/{max_value} |{'=' * r}>{'.' * (30 - r)}|", end='')
+

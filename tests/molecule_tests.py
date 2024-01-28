@@ -1,9 +1,9 @@
 from ehrlich.molecule import read_pdb
 
 molecule = read_pdb("../assets/8sib.pdb")
-print(f"molecule coords:\n{molecule.coordinates}")
+print(f"molecule coords:\n{molecule.coords}")
 print(f"molecule radius: {molecule.get_radius()}")
-print(f"count of atoms: {len(molecule.coordinates)}")
+print(f"count of atoms: {len(molecule.coords)}")
 
 for i in range(200, 210):
     print(f"{i} - name: {molecule.atoms[i].name}; residue: {molecule.atoms[i].residue}")

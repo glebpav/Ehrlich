@@ -130,7 +130,7 @@ class MoleculeSurface:
         print("here")
         for point_idx, point in enumerate(self.points):
             self.log(point_idx)
-            dists = {idx: get_dist(mol_point.coordinates, point.shrunk_coords)
+            dists = {idx: get_dist(mol_point.coords, point.shrunk_coords)
                      for idx, mol_point in enumerate(self.molecule)}
             dists = {k: v for k, v in sorted(dists.items(), key=lambda item: item[1])}
             best_atom_idx = list(dists.keys())[0]

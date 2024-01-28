@@ -51,16 +51,16 @@ class Frame(object):
     def __init__(self, length, width, grid_step, min_x, min_y, count_of_points_for_circle, error, water_radius):
         self.length = length
         self.width = width
-        self.min_x = round(min_x, 3)
-        self.min_y = round(min_y, 3)
+        self.min_x = round(float(min_x), 3)
+        self.min_y = round(float(min_y), 3)
         self.grid_step = grid_step
         self.count_of_points_for_circle = count_of_points_for_circle
         self.error = error
         self.water_radius = water_radius
         self.max_chain_distance = grid_step * math.sqrt(2) + 0.003
-        self.grid = np.zeros((round(length / grid_step), round(width / grid_step)), int)
-        self.ruler_x = [self.min_x + step * grid_step for step in range(0, round(length / grid_step))]
-        self.ruler_y = [self.min_y + step * grid_step for step in range(0, round(width / grid_step))]
+        self.grid = np.zeros((round(float(length) / grid_step), round(float(width) / grid_step)), int)
+        self.ruler_x = [self.min_x + step * grid_step for step in range(0, round(float(length) / grid_step))]
+        self.ruler_y = [self.min_y + step * grid_step for step in range(0, round(float(width) / grid_step))]
         self.atomsInFrame = []
         self.min_x_for_atom = None
         self.max_x_for_atom = None

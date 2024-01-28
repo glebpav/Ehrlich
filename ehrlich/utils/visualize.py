@@ -15,6 +15,8 @@ ATOM_VWR = {
     'N1+': 1.8240
 }
 
+unknown_atom_vwr = ATOM_VWR['C']
+
 acids_colors_map = {
     'GLY': '#000080',
     'LEU': '#00FF00',
@@ -44,12 +46,19 @@ unknown_color = '#44944a'
 
 
 def get_atom_color(acid):
-    if acids_colors_map.__contains__(acid):
-        return acids_colors_map[acid]
+    if acids_colors_map.__contains__(str(acid).upper()):
+        return acids_colors_map[str(acid).upper()]
     return unknown_color
 
 
-colors_list = list(acids_colors_map.values())
+def get_atom_vwr(atom_name):
+    if len(str(atom_name)) > 1:
+        atom_name = atom_name[0]
+
+    if ATOM_VWR.__contains__(atom_name):
+        return ATOM_VWR[atom_name]
+
+    return unknown_atom_vwr
 
 
 class Visualize:
@@ -120,7 +129,7 @@ class Visualize:
 
         converted_inside_cone_atoms_1 = [
             np.array(self.__convert_coord(
-                self.surface1.molecule.atoms[point.atom_idx].coordinates - self.offset_1,
+                self.surface1.molecule.atoms[point.atom_idx].coords - self.offset_1,
                 self.beta1, self.gamma1
             ))
             for point_idx, point in enumerate(self.surface1.points)
@@ -135,7 +144,7 @@ class Visualize:
 
         converted_inside_cone_atoms_2 = [
             np.array(self.__convert_coord(
-                self.surface2.molecule.atoms[point.atom_idx].coordinates - self.offset_2,
+                self.surface2.molecule.atoms[point.atom_idx].coords - self.offset_2,
                 self.beta2, self.gamma2
             ))
             for point_idx, point in enumerate(self.surface2.points)
@@ -143,13 +152,13 @@ class Visualize:
         ]
 
         radius_1 = [
-            ATOM_VWR[self.surface1.molecule.atoms[point.atom_idx].name] * 70
+            get_atom_vwr(self.surface1.molecule.atoms[point.atom_idx].name) * 70
             for point_idx, point in enumerate(self.surface1.points)
             if self.surface1.molecule.atoms[point.atom_idx].residue_num in residue_numbers_1
         ]
 
         radius_2 = [
-            ATOM_VWR[self.surface2.molecule.atoms[point.atom_idx].name] * 70
+            get_atom_vwr(self.surface2.molecule.atoms[point.atom_idx].name) * 70
             for point_idx, point in enumerate(self.surface2.points)
             if self.surface2.molecule.atoms[point.atom_idx].residue_num in residue_numbers_2
         ]
@@ -216,6 +225,10 @@ class Visualize:
 
         axis[0].quiver(0, 0, 0, norm1[0], norm1[1], norm1[2], color="red")
         axis[1].quiver(0, 0, 0, norm2[0], norm2[1], norm2[2], color="blue")
+
+        size_array = []
+        for i in range(len(radius_1)):
+            size_array.append(i)
 
         axis[0].scatter(Xa1, Ya1, Za1, color=colors1, alpha=1,
                         s=[(radius ** 2 * math.pi / 4) / (2 * max1) * (1 / 3) * fig_size[0] for radius in radius_1])

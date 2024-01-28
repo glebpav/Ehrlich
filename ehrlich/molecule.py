@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import numpy as np
 
-from ehrlich.utils.math_utils import double_range
+from ehrlich.utils.math_utils import log
 from ehrlich.utils.plane_utils import GirdPoint, Frame
 
 
@@ -24,7 +24,7 @@ class Atom:
         :param z: z coordinate of atom
         """
         self.name = name
-        self.coordinates = np.array([x, y, z])
+        self.coords = np.array([x, y, z])
         self.idx = idx
         self.residue = residue
         self.residue_num = residue_num
@@ -80,12 +80,16 @@ class Sparsify:
             point.idx = idx
 
         levels = []
-        for currentZ in double_range(Decimal(min_z), Decimal(max_z), self.z_step):
+        # for currentZ in double_range(Decimal(min_z), Decimal(max_z), self.z_step):
+        for currentZ in np.linspace(0, max_z - min_z, int((max_z - min_z) / self.z_step)):
+
+            log("Slices splitting", round(float(currentZ), 2), round(float(max_z - min_z), 2))
+            currentZ = float(currentZ + min_z)
 
             current_frame = Frame(max_x - min_x + self.error, max_y - min_y + self.error, self.lower_step_x, min_x,
                                   min_y, self.count_of_points_for_circle, self.error, self.water_radius)
 
-            print(float('{:.2f}'.format(currentZ)), 'out of', float('{:.2f}'.format(max_z)))
+            # print(float('{:.2f}'.format(float(currentZ))), 'out of', float('{:.2f}'.format(float(max_z))))
 
             for point in points:
                 if (point.z > currentZ > (point.z - point.radius)) or (point.z < currentZ < point.z + point.radius):
@@ -95,12 +99,14 @@ class Sparsify:
             levels.append(current_frame)
 
         count_of_levels = len(levels)
+        print()
         for idx, frame in enumerate(levels):
 
             frame.paint_frames()
             cells_for_water = round(self.water_radius / frame.grid_step)
 
-            print(idx, "out of:", count_of_levels)
+            # print(idx, "out of:", count_of_levels)
+            log("Slices execution", idx + 1, count_of_levels)
 
             if frame.has_atoms_in_frame():
                 for x_idx in range(frame.min_x_for_atom - cells_for_water - 1,
@@ -134,6 +140,7 @@ class Sparsify:
 
         out_atoms = np.array(out_atoms)
 
+        print()
         print(f"Before optimizing: {len(coords)}")
         print(f"After optimizing: {len(out_atoms)}")
         print(f"Optimizing ratio: {1 - len(out_atoms) / len(coords)}")
@@ -150,7 +157,7 @@ class Sparsify:
 class Molecule(Sparsify):
     def __init__(self, atoms):
         self.atoms = atoms.copy()
-        self.coordinates = self.get_coordinates(atoms)
+        self.coords = self.get_coordinates(atoms)
         self.original_mol = None
 
     def __iter__(self):
@@ -162,13 +169,13 @@ class Molecule(Sparsify):
     def get_coordinates(self, atoms=None):
         if atoms is None:
             atoms = self.atoms
-        coordinates_list = [atom.coordinates for atom in atoms]
+        coordinates_list = [atom.coords for atom in atoms]
         return np.array(coordinates_list)
 
     def get_radius(self):
         max_atom_distance = 0.
         for atom in self.atoms:
-            max_atom_distance = max(np.linalg.norm(atom.coordinates), max_atom_distance)
+            max_atom_distance = max(np.linalg.norm(atom.coords), max_atom_distance)
         return max_atom_distance
 
     def get_atoms_names(self):
