@@ -111,8 +111,8 @@ class MoleculeSurface:
     def __init__(self, points, bonds):
         self.__molecule = None
         self.points = points  # list[Points]
+        self.bonds = bonds # [(1, 2, 4), (2, 5, 7, 7) ... ] - list[Tuple([int])]
         # self.bonds = self.parse_points_bonds()
-        self.bonds = bonds
 
     def parse_points_bonds(self):
         bonds = []
@@ -178,6 +178,81 @@ class MoleculeSurface:
         for point in self.points:
             norms.append(np.linalg.norm(point.shrunk_coords))
         return sum(norms) / len(norms)
+
+    def spiral_search(self, start_point_idx):
+
+        visited_points = [start_point_idx]
+        previous_point_idx = start_point_idx
+        yield previous_point_idx
+
+        visited_points.append(self.bonds[previous_point_idx][0])
+        previous_point_idx = self.bonds[previous_point_idx][0]
+        yield previous_point_idx
+
+        while True:
+
+            possible_points = self.bonds[previous_point_idx]
+            visited_neighbour_counter = {}
+            distance_counter = {}
+            cos_counter = {}
+
+            for point_idx in possible_points:
+
+                if point_idx in visited_points: continue
+
+                vect1 = self.points[visited_points[-1]].shrunk_coords - self.points[visited_points[-2]].shrunk_coords
+                vect2 = self.points[point_idx].shrunk_coords - self.points[visited_points[-1]].shrunk_coords
+                cos = get_cos(vect1, vect2)
+                if cos < 0: continue
+                if not any(map(lambda value: (value in visited_points) and (value != previous_point_idx), self.bonds[point_idx])): continue
+                cos_counter[point_idx] = cos
+
+                visited_neighbour_counter[point_idx] = any(map(lambda value: (value in visited_points) and (value != previous_point_idx), self.bonds[point_idx]))
+                print(visited_neighbour_counter[point_idx])
+                distance_counter[point_idx] = get_dist(self.points[point_idx].shrunk_coords, self.points[visited_points[0]].shrunk_coords)
+
+            if len(visited_neighbour_counter.keys()) == 0:
+                print("this branch")
+                cos_counter = {}
+                for point_idx in possible_points:
+                    if point_idx in visited_points: continue
+                    visited_neighbour_counter[point_idx] = any(map(lambda value: (value in visited_points) and (value != previous_point_idx),self.bonds[point_idx]))
+                    print(visited_neighbour_counter[point_idx])
+                    distance_counter[point_idx] = get_dist(self.points[point_idx].shrunk_coords,
+                                                           self.points[visited_points[0]].shrunk_coords)
+
+                if len(visited_neighbour_counter.keys()) == 0: return
+
+            if len(list(cos_counter.keys())) > 0:
+                print("case 1")
+                max_point_idx = list(distance_counter.keys())[0]
+                min_dist = distance_counter.get(list(distance_counter.keys())[0])
+                min_cos = cos_counter.get(list(cos_counter.keys())[0])
+
+                for key in list(distance_counter.keys()):
+                    # if visited_neighbour_counter[key] and distance_counter[key] < min_dist:
+                    if visited_neighbour_counter[key] and cos_counter[key] > min_cos:
+                        min_dist = distance_counter[key]
+                        min_cos = cos_counter[key]
+                        max_point_idx = key
+
+            else:
+                print("case 2")
+                max_point_idx = list(distance_counter.keys())[0]
+                min_dist = distance_counter.get(list(distance_counter.keys())[0])
+
+                for key in list(distance_counter.keys()):
+                    if visited_neighbour_counter[key] and distance_counter[key] < min_dist:
+                        min_dist = distance_counter[key]
+                        max_point_idx = key
+
+            next_point = max_point_idx
+            print(visited_neighbour_counter)
+            print('next: ', next_point)
+            previous_point_idx = next_point
+            visited_points.append(previous_point_idx)
+            yield previous_point_idx
+
 
 
 def load_molecule_surface(path) -> MoleculeSurface:
