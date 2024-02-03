@@ -4,6 +4,7 @@ import time
 import sys
 from stl import mesh
 from functools import cached_property
+import shutil
 
 if sys.version_info>=(3, 9):
     import importlib.resources as pkg_resources
@@ -270,6 +271,14 @@ def make_surface(molecule, d=0.6, e=0.99):
 
     tms_mesh_pkg = pkg_resources.files("ehrlich")
     tms_mesh_path = tms_mesh_pkg.joinpath("TMSmesh2.1")
+    p1_path = tms_mesh_pkg.joinpath("p1.txt")
+    p2_path = tms_mesh_pkg.joinpath("p2.txt")
+    leg_path = tms_mesh_pkg.joinpath("leg.dat")
+
+    shutil.copyfile(p1_path, "p1.txt")
+    shutil.copyfile(p2_path, "p2.txt")
+    shutil.copyfile(leg_path, "leg.dat")
+
     # creating shrunk surface
     os.system(f"{tms_mesh_path} {path_to_pqr}.pqr {d} {e}")
 
@@ -279,6 +288,10 @@ def make_surface(molecule, d=0.6, e=0.99):
 
     coords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)])
     connections = np.array([list(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))])
+
+    os.remove('p1.txt')
+    os.remove('p2.txt')
+    os.remove('leg.dat')
 
     os.remove(file_name)
     os.remove(f"{path_to_pqr}.pqr")
