@@ -2,11 +2,13 @@ import os
 import pickle
 import time
 import sys
+
+import numpy as np
 from stl import mesh
 from functools import cached_property
 import shutil
 
-if sys.version_info>=(3, 9):
+if sys.version_info >= (3, 9):
     import importlib.resources as pkg_resources
 else:
     import importlib_resources as pkg_resources
@@ -46,7 +48,8 @@ class Point:
         for level_idx in range(3):
             adj_points_idxs = []
             for selected_point_idx in used_points:
-                adj_points_idxs += [adj_point_idx for adj_point_idx in mol_surface.points[selected_point_idx].neighbors_points_idx if
+                adj_points_idxs += [adj_point_idx for adj_point_idx in
+                                    mol_surface.points[selected_point_idx].neighbors_points_idx if
                                     adj_point_idx not in used_points]
 
             adj_points_idxs = list(set(adj_points_idxs))
@@ -112,7 +115,8 @@ class MoleculeSurface:
     def __init__(self, points, bonds):
         self.__molecule = None
         self.points = points  # list[Points]
-        self.bonds = bonds # [(1, 2, 4), (2, 5, 7, 7) ... ] - list[Tuple([int])]
+        self.bonds = bonds  # [(1, 2, 4), (2, 5, 7, 7) ... ] - list[Tuple([int])]
+        self.faces = None
         # self.bonds = self.parse_points_bonds()
 
     def parse_points_bonds(self):
@@ -205,19 +209,25 @@ class MoleculeSurface:
                 vect2 = self.points[point_idx].shrunk_coords - self.points[visited_points[-1]].shrunk_coords
                 cos = get_cos(vect1, vect2)
                 if cos < 0: continue
-                if not any(map(lambda value: (value in visited_points) and (value != previous_point_idx), self.bonds[point_idx])): continue
+                if not any(map(lambda value: (value in visited_points) and (value != previous_point_idx),
+                               self.bonds[point_idx])): continue
                 cos_counter[point_idx] = cos
 
-                visited_neighbour_counter[point_idx] = any(map(lambda value: (value in visited_points) and (value != previous_point_idx), self.bonds[point_idx]))
+                visited_neighbour_counter[point_idx] = any(
+                    map(lambda value: (value in visited_points) and (value != previous_point_idx),
+                        self.bonds[point_idx]))
                 print(visited_neighbour_counter[point_idx])
-                distance_counter[point_idx] = get_dist(self.points[point_idx].shrunk_coords, self.points[visited_points[0]].shrunk_coords)
+                distance_counter[point_idx] = get_dist(self.points[point_idx].shrunk_coords,
+                                                       self.points[visited_points[0]].shrunk_coords)
 
             if len(visited_neighbour_counter.keys()) == 0:
                 print("this branch")
                 cos_counter = {}
                 for point_idx in possible_points:
                     if point_idx in visited_points: continue
-                    visited_neighbour_counter[point_idx] = any(map(lambda value: (value in visited_points) and (value != previous_point_idx),self.bonds[point_idx]))
+                    visited_neighbour_counter[point_idx] = any(
+                        map(lambda value: (value in visited_points) and (value != previous_point_idx),
+                            self.bonds[point_idx]))
                     print(visited_neighbour_counter[point_idx])
                     distance_counter[point_idx] = get_dist(self.points[point_idx].shrunk_coords,
                                                            self.points[visited_points[0]].shrunk_coords)
@@ -254,6 +264,12 @@ class MoleculeSurface:
             visited_points.append(previous_point_idx)
             yield previous_point_idx
 
+    def to_stl(self):
+        mesh_object = mesh.Mesh(np.zeros(self.faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(self.faces):
+            for j in range(3):
+                mesh_object.vectors[i][j] = self.points[f[j]].shrunk_coords
+        return mesh_object
 
 
 def load_molecule_surface(path) -> MoleculeSurface:
@@ -287,7 +303,8 @@ def make_surface(molecule, d=0.6, e=0.99):
         lines = f.readlines()
 
     coords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)])
-    connections = np.array([list(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))])
+    connections = np.array(
+        [list(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))])
 
     os.remove('p1.txt')
     os.remove('p2.txt')
@@ -305,10 +322,15 @@ def make_surface(molecule, d=0.6, e=0.99):
         adj[idx3].update([idx1, idx2])
 
     # preparing data for stl format
-    cube = mesh.Mesh(np.zeros(connections.shape[0], dtype=mesh.Mesh.dtype))
+    """cube = mesh.Mesh(np.zeros(connections.shape[0], dtype=mesh.Mesh.dtype))
     for i, f in enumerate(connections):
         for j in range(3):
-            cube.vectors[i][j] = coords[f[j], :]
+            cube.vectors[i][j] = coords[f[j], :]"""
+    """faces = np.zeros(connections.shape[0])
+    for i, f in enumerate(connections):
+        for j in range(3):
+            faces[i][j] = f[j]"""
+    faces = np.array(connections)
 
     points = []
     for point_idx in range(len(coords)):
@@ -321,5 +343,6 @@ def make_surface(molecule, d=0.6, e=0.99):
     # creating object of MoleculeSurface
     molecule_surface = MoleculeSurface(points, [tuple(s) for s in adj])
     molecule_surface.molecule = molecule
+    molecule_surface.faces = faces
 
-    return molecule_surface, cube
+    return molecule_surface
