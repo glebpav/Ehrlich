@@ -1,6 +1,14 @@
+import os
 import pickle
 import time
+import sys
+from stl import mesh
 from functools import cached_property
+
+if sys.version_info>=(3, 9):
+    import importlib.resources as pkg_resources
+else:
+    import importlib_resources as pkg_resources
 
 from ehrlich import Molecule
 from ehrlich.optimizer import Optimizer
@@ -177,63 +185,53 @@ def load_molecule_surface(path) -> MoleculeSurface:
         return pickle.load(handle)
 
 
-def make_surface(
-        molecule,
-        split_times=6,
-        n_steps=10000,
-        time_step=1e-1,
-        lambda_k=0.5,
-        close_atoms_ratio=1.35,
-        comp_f_ratio=0.3,
-        # comp_f_ratio=1.,
-        patience=50,
-        last_weight=0.9,
-        accuracy_degree=3,
-        doorstep_accuracy=1e-7,
-        gpu=False
-):
-    # sphere creation
-    molecule_radius = molecule.get_radius()
-    sphere = Sphere(molecule_radius + 10)
-    for _ in range(split_times):
-        print(sphere.split())
+def make_surface(molecule, d=0.6, e=0.99):
+    path_to_pqr = ""
+    for str_item in molecule.path_to_pdb.split(".")[0:-1]:
+        path_to_pqr += str(str_item)
 
-    # optimizer creation
-    optimizer = Optimizer(
-        atoms=molecule.get_coordinates(),
-        labels=molecule.get_atoms_names(),
-        V=sphere.V,
-        adj=sphere.adj,
-        gpu=gpu
-    )
+    # converting pdb to pqr format
+    os.system(f"pdb2pqr --ff=AMBER {molecule.path_to_pdb} {path_to_pqr}.pqr")
 
-    start_time = time.time()
+    tms_mesh_pkg = pkg_resources.files("ehrlich")
+    tms_mesh_path = tms_mesh_pkg.joinpath("TMSmesh2.1")
+    # creating shrunk surface
+    os.system(f"{tms_mesh_path} {path_to_pqr}.pqr {d} {e}")
 
-    optimizer.optimize(
-        Nsteps=n_steps,
-        time_step=time_step,
-        lambda_k=lambda_k,
-        close_atoms_ratio=close_atoms_ratio,
-        comp_f_ratio=comp_f_ratio,
-        # comp_f_ratio=1.,
-        patience=patience,
-        last_weight=last_weight,
-        accuracy_degree=accuracy_degree,
-        doorstep_accuracy=doorstep_accuracy
-    )
-    # optional
-    print(f"\nTime passed: {time.time() - start_time}")
+    file_name = f"{path_to_pqr}.pqr-{d}_{e}.off_modify.off"
+    with open(file_name) as f:
+        lines = f.readlines()
 
-    shrunk_coords = optimizer.V.cpu().numpy()
+    coords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)])
+    connections = np.array([list(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))])
+
+    os.remove(file_name)
+    os.remove(f"{path_to_pqr}.pqr")
+
+    # converting connections from triangles to adj list
+    adj = [set() for _ in range(len(coords))]
+    for line in connections:
+        idx1, idx2, idx3 = line
+        adj[idx1].update([idx2, idx3])
+        adj[idx2].update([idx1, idx3])
+        adj[idx3].update([idx1, idx2])
+
+    # preparing data for stl format
+    cube = mesh.Mesh(np.zeros(connections.shape[0], dtype=mesh.Mesh.dtype))
+    for i, f in enumerate(connections):
+        for j in range(3):
+            cube.vectors[i][j] = coords[f[j], :]
 
     points = []
-    for point_idx in range(len(shrunk_coords)):
+    for point_idx in range(len(coords)):
         points.append(Point(
-            origin_coords=sphere.V[point_idx],
-            shrunk_coords=shrunk_coords[point_idx],
-            neighbors_points_idx=sphere.adj[point_idx],
+            origin_coords=[0, 0, 0],
+            shrunk_coords=coords[point_idx],
+            neighbors_points_idx=adj[point_idx],
         ))
 
-    molecule_surface = MoleculeSurface(points, sphere.adj)
+    # creating object of MoleculeSurface
+    molecule_surface = MoleculeSurface(points, [tuple(s) for s in adj])
     molecule_surface.molecule = molecule
-    return molecule_surface
+
+    return molecule_surface, cube

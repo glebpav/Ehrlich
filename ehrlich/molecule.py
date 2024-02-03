@@ -155,10 +155,11 @@ class Sparsify:
 
 
 class Molecule(Sparsify):
-    def __init__(self, atoms):
+    def __init__(self, atoms, path_to_pdb=None):
         self.atoms = atoms.copy()
         self.coords = self.get_coordinates(atoms)
         self.original_mol = None
+        self.path_to_pdb = path_to_pdb
 
     def __iter__(self):
         return iter(self.atoms)
@@ -212,4 +213,4 @@ def read_pdb(path):
 
         atoms_list.append(Atom(atom_idx, full_atom_name[0], amino_acid, amino_acid_idx, x, y, z))
 
-    return Molecule(atoms_list)
+    return Molecule(atoms_list, path)
