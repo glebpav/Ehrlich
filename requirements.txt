@@ -4,3 +4,6 @@ torch~=2.1.1
 setuptools~=49.2.1
 numpy-stl~=2.17.0
 pdb2pqr~=3.6.2
+
+pyvista~=0.43.3
+pyacvd~=0.2.10

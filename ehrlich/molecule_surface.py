@@ -1,10 +1,14 @@
 import os
 import pickle
-import time
 import sys
 
-import numpy as np
+import pyvista as pv
+import pyacvd
+
 from stl import mesh
+
+import numpy as np
+
 from functools import cached_property
 import shutil
 
@@ -14,8 +18,6 @@ else:
     import importlib_resources as pkg_resources
 
 from ehrlich import Molecule
-from ehrlich.optimizer import Optimizer
-from ehrlich.sphere import Sphere
 from ehrlich.utils.math_utils import *
 
 
@@ -184,7 +186,47 @@ class MoleculeSurface:
             norms.append(np.linalg.norm(point.shrunk_coords))
         return sum(norms) / len(norms)
 
+    def get_sparse_points(self, points_number=None):
+
+        """
+        Get indexes of sparse points from surface
+        :param points_number: count of points or count of surface points in case of None
+        :return: list of points indexes
+        """""
+
+        if points_number is None:
+            points_number = len(self.molecule.sparse().atoms)
+
+        # TODO: remove redundant save
+        self.to_stl().save('buffer_surface.stl')
+        input_mesh = pv.PolyData('buffer_surface.stl')
+        clus = pyacvd.Clustering(input_mesh)
+
+        clus.subdivide(3)
+        clus.cluster(points_number)
+
+        output_mesh = clus.create_mesh()
+
+        mapped_points = [0] * len(output_mesh.points)
+        for output_idx, a_coord in enumerate(output_mesh.points):
+            min_dist = get_dist(a_coord, input_mesh.points[0])
+
+            for input_idx, b_coord in enumerate(input_mesh.points):
+                new_dist = get_dist(a_coord, b_coord)
+                if new_dist < min_dist:
+                    min_dist = new_dist
+                    mapped_points[output_idx] = input_idx
+
+        return mapped_points
+
     def to_stl(self):
+
+        """
+        Prepare surface to save in stl
+        just write o.to_stl().save('name.stl') to save in stl format
+        :return: object that can be saved
+        """
+
         mesh_object = mesh.Mesh(np.zeros(self.faces.shape[0], dtype=mesh.Mesh.dtype))
         for i, f in enumerate(self.faces):
             for j in range(3):
