@@ -192,6 +192,7 @@ colors_map = {
 
 color_list = list(colors_map.values())
 
+
 def get_atom_color(acid):
     if acids_colors_map.__contains__(str(acid).upper()):
         return acids_colors_map[str(acid).upper()]
@@ -241,12 +242,6 @@ class Visualize:
 
         self.gamma1 = math.degrees(self.__get_gamma(self.norm1))
         self.gamma2 = math.degrees(self.__get_gamma(self.norm2))
-
-        # print(f"original norm 1: {self.norm1}")
-        # print(f"converted norm 1: {self.__convert_coord(self.norm1, self.beta1, self.gamma1)}")
-        # print()
-        # print(f"original norm 2: {self.norm2}")
-        # print(f"converted norm 2: {self.__convert_coord(self.norm2, self.beta2, self.gamma2)}")
 
     def draw_region(self, elevation=30, azimuth=45, opacity=0.7, fig_size=(20, 10), dpi=300):
         figure, axis = plt.subplots(1, 2, figsize=fig_size, subplot_kw=dict(projection='3d'), dpi=dpi)

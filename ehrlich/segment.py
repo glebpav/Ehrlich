@@ -57,17 +57,8 @@ class Segment:
         self.used_edges = []
 
         while has_next_env:
-            new_edges, new_points = get_neighbour_data(self.envs_points[-1], self.edge_list, self.surface.faces,
-                                                       self.used_points, self.used_edges)
-            self.area += self.area_of_faces(new_edges)
 
-            if len(new_edges) * len(new_points) == 0:
-                return
-
-            self.used_points += new_points
-            self.used_edges += new_edges
-            self.envs_surfaces.append(new_edges)
-            self.envs_points.append(new_points)
+            self.add_env()
 
             if area is not None:
                 if area < self.area:
