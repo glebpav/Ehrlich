@@ -84,7 +84,13 @@ def find_inside_cone_points(points, center_vector, central_angle):
     return list_inside_points_idxs
 
 
+def area_of_triangle(p1, p2, p3):
+    v1 = np.array(p1)
+    v2 = np.array(p2)
+    v3 = np.array(p3)
+    return 0.5 * np.linalg.norm(np.cross(v2 - v1, v3 - v1))
+
+
 def log(label_text, this_value, max_value):
     r = int(30 * this_value / max_value)
     print(f"\r{label_text}: {this_value}/{max_value} |{'=' * r}>{'.' * (30 - r)}|", end='')
-

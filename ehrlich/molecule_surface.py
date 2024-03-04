@@ -142,7 +142,6 @@ class MoleculeSurface:
     def project(self):
         if self.__molecule is None:
             raise RuntimeError("molecule is None")
-        print("here")
         for point_idx, point in enumerate(self.points):
             self.log(point_idx)
             dists = {idx: get_dist(mol_point.coords, point.shrunk_coords)
@@ -196,6 +195,82 @@ class MoleculeSurface:
 
         if points_number is None:
             points_number = len(self.molecule.sparse().atoms)
+
+        # TODO: remove redundant save
+        self.to_stl().save('buffer_surface.stl')
+        input_mesh = pv.PolyData('buffer_surface.stl')
+        clus = pyacvd.Clustering(input_mesh)
+
+        clus.subdivide(3)
+        clus.cluster(points_number)
+
+        output_mesh = clus.create_mesh()
+
+        mapped_points = [0] * len(output_mesh.points)
+        for output_idx, a_coord in enumerate(output_mesh.points):
+            min_dist = get_dist(a_coord, input_mesh.points[0])
+
+            for input_idx, b_coord in enumerate(input_mesh.points):
+                new_dist = get_dist(a_coord, b_coord)
+                if new_dist < min_dist:
+                    min_dist = new_dist
+                    mapped_points[output_idx] = input_idx
+
+        return mapped_points
+
+    def get_fixed_version(self):
+        self.to_stl().save('buffer_surface.stl')
+        input_mesh = pv.PolyData('buffer_surface.stl')
+        clus = pyacvd.Clustering(input_mesh)
+
+        clus.subdivide(3)
+        clus.cluster(len(self.points))
+
+        output_mesh = clus.create_mesh()
+        output_faces = [list(output_mesh.faces[1 + i * 4: (i + 1) * 4:]) for i in
+                        range(int(len(output_mesh.faces) / 4))]
+
+        # converting connections from triangles to adj list
+        adj = [set() for _ in range(len(output_mesh.points))]
+        for line in output_faces:
+            idx1, idx2, idx3 = line
+            adj[idx1].update([idx2, idx3])
+            adj[idx2].update([idx1, idx3])
+            adj[idx3].update([idx1, idx2])
+
+        faces = np.array(output_faces)
+
+        points = []
+        for point_idx in range(len(output_mesh.points)):
+            points.append(Point(
+                origin_coords=[0, 0, 0],
+                shrunk_coords=output_mesh.points[point_idx],
+                neighbors_points_idx=adj[point_idx],
+            ))
+
+        # creating object of MoleculeSurface
+        molecule_surface = MoleculeSurface(points, [tuple(s) for s in adj])
+        molecule_surface.molecule = self.molecule
+        molecule_surface.faces = faces
+
+        return molecule_surface
+
+    def sample(self, points_number=0.1):
+        """
+        Get indexes of sparse points from surface
+        :param points_number: count of points or count of surface points in case of None
+        :return: list of points indexes
+        """""
+
+        if points_number is None:
+            points_number = len(self.molecule.sparse().atoms)
+
+        if isinstance(points_number, int):
+            pass
+        elif isinstance(points_number, float) and 0 < points_number <= 1:
+            points_number = int(points_number * len(self.points))
+        else:
+            return list(range(len(self.points)))
 
         # TODO: remove redundant save
         self.to_stl().save('buffer_surface.stl')
@@ -297,5 +372,7 @@ def make_surface(molecule, d=0.6, e=0.99):
     molecule_surface = MoleculeSurface(points, [tuple(s) for s in adj])
     molecule_surface.molecule = molecule
     molecule_surface.faces = faces
+
+    molecule_surface = molecule_surface.get_fixed_version()
 
     return molecule_surface
