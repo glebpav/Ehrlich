@@ -1,0 +1,14 @@
+Metadata-Version: 1.2
+Name: ehrlich
+Version: 1.0.0
+Summary: Tool for comparing protein surface parameters
+Home-page: UNKNOWN
+Author: NanoBioRobots inc
+License: LGPLv3
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
+Requires-Python: >=3.8

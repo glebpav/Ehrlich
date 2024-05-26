@@ -1,4 +1,5 @@
 import math
+from typing import Dict, Any, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,7 +7,11 @@ from mpl_toolkits.mplot3d import Axes3D, art3d
 
 from functools import cached_property
 
+from numpy import ndarray, dtype, floating, float_
+from numpy._typing import _64Bit
+
 from ehrlich import MoleculeSurface, get_rotated_vector, find_inside_cone_points, Point, area_of_triangle, color_list
+from ehrlich.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
 
 
 class Segment:
@@ -68,30 +73,39 @@ class Segment:
                 if max_env >= len(self.envs_points):
                     return
 
-    @cached_property
-    def amines(self):
-        used_idxs = {}
-        segment_counter = {}
-        for env in self.envs_points:
-            for point in env:
-                acid = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue
-                if acid not in segment_counter:
-                    segment_counter[acid] = 1
-                    used_idxs[acid] = [self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num]
-                elif self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num not in used_idxs[acid]:
-                    segment_counter[acid] += 1
-                    used_idxs[acid].append(self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num)
-        return segment_counter
+    def amin_similarity(self, counter2_origin: ndarray) -> float:
+        score: float = 0.
 
-    def amin_similarity(self, counter2):
-        counter_result = {}
-        score = 0
+        counter1 = self.amines.copy()
+        counter2 = counter2_origin.copy()
 
-        for acid, count in self.amines.items():
-            if acid in list(counter2.keys()):
-                counter_result[acid] = min(count, counter2[acid])
-                score += counter_result[acid]
-        return score, counter_result
+        for acid_idx in range(len(counter1)):
+            addition_score = min(counter1[acid_idx], counter2[acid_idx])
+            score += addition_score
+            counter1[acid_idx] -= addition_score
+            counter2[acid_idx] -= addition_score
+
+        counter_not_empty = True
+        while counter_not_empty:
+            acid_idx = np.argmax(counter1)
+            best_acid = np.argmax(np.where(counter2 > 0, amin_similarity_matrix[acid_idx], 0))
+            acid_count = min(counter1[best_acid], counter2[best_acid])
+            counter1[best_acid] -= acid_count
+            counter2[best_acid] -= acid_count
+            score += amin_similarity_matrix[acid_idx][best_acid] * acid_count
+            if np.sum(counter1[best_acid]) == 0 or np.sum(counter2[best_acid]) == 0:
+                counter_not_empty = False
+
+        print(f"{score=}")
+        print(f"{counter1=}")
+        print(f"{counter2=}")
+        print(f"{self.amines=}")
+        print(f"{counter2_origin=}")
+        print(f"{np.sum(counter2_origin)=}")
+        print(f"{np.sum(self.amines)=}")
+
+        score /= np.sum(self.amines) + np.sum(counter2_origin)
+        return score
 
     def show(self, surface):
         fig = plt.figure()
@@ -124,6 +138,43 @@ class Segment:
 
         pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black")
         ax.add_collection(pc)
+
+    @cached_property
+    def amines(self) -> ndarray:
+        used_idxs = [[] for _ in range(len(amino_acid_list))]
+        segment_counter = np.zeros(len(amino_acid_list), dtype=int)
+        for env_level in self.envs_points:
+            for point in env_level:
+                acid = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue[0]
+                residue_num = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num
+                print(f"{acid=} {residue_num=}")
+                if residue_num not in used_idxs[get_amin_idx(acid)]:
+                    segment_counter[get_amin_idx(acid)] += 1.
+                    used_idxs[get_amin_idx(acid)].append(residue_num)
+        return segment_counter
+
+    @cached_property
+    def concavity(self) -> float:
+        norm_vect = self.surface.points[self.center_point_idx].compute_norm(self.surface)
+        m = []
+        for level in self.envs_points[1:]:
+            for point_idx in level:
+
+                vect = (self.surface.points[point_idx].shrunk_coords
+                        - self.surface.points[self.center_point_idx].shrunk_coords)
+                vect /= np.linalg.norm(vect)
+
+                m.append(vect)
+
+        m = np.array(m)
+        self.d = norm_vect@m.T
+
+        return np.mean(self.d)
+
+    @cached_property
+    def curvature(self) -> float:
+        if self.d is None: self.concavity
+        return self.d@self.d
 
 
 def get_neighbour_data(old_points_idxs, edge_list, points_list, used_points, used_edges):
