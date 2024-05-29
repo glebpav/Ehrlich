@@ -1,5 +1,6 @@
 import math
-from typing import Dict, Any, Union
+import sys
+from typing import Dict, Any, Union, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,11 +8,11 @@ from mpl_toolkits.mplot3d import Axes3D, art3d
 
 from functools import cached_property
 
-from numpy import ndarray, dtype, floating, float_
-from numpy._typing import _64Bit
+from numpy import ndarray
 
 from ehrlich import MoleculeSurface, get_rotated_vector, find_inside_cone_points, Point, area_of_triangle, color_list
 from ehrlich.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
+from ehrlich.utils.icp_helper import icp_optimization
 
 
 class Segment:
@@ -138,6 +139,62 @@ class Segment:
 
         pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black")
         ax.add_collection(pc)
+
+    # Compute coords that:
+    # center point moved to (0; 0; 0) and
+    # rotated to make norm of segment (0; 0; 1)
+    def get_aligned_coords(self) -> np.ndarray:
+        center_point = self.surface.points[self.center_point_idx]
+        center_point_coords = center_point.shrunk_coords
+
+        e3 = center_point.compute_norm(self.surface)
+        g = np.array([10, 0, -(e3[0] / e3[2])])
+        e1 = g / np.linalg.norm(g)
+        e2 = np.cross(e3, e1)
+
+        t = np.array([e1, e2, e3]).T
+        t_inv = np.linalg.inv(t)
+
+        out_coords = []
+        for idx, point_idx in enumerate(self.used_points):
+            out_coords.append(np.matmul(t_inv, self.surface.points[point_idx].shrunk_coords - center_point_coords))
+
+        return np.array(out_coords)
+
+    def compare(self, other_segment) -> Tuple[float, float]:
+
+        aligned_coords1 = self.get_aligned_coords()
+        aligned_coords2 = other_segment.get_aligned_coords()
+
+        min_norm_value = sys.float_info.max
+        out_corresp = None
+        out_coords = None
+
+        for rotation_idx, rotation_angle in enumerate([0, 60, 120, 180, 270]):
+            print(f'ration {rotation_idx + 1} out of {6}')
+            rotated_coords = np.array([get_rotated_vector(vector, rotation_angle, "z") for vector in aligned_coords1])
+            coords, norm_values, corresp_values = icp_optimization(rotated_coords, aligned_coords2)
+            if min_norm_value > norm_values:
+                min_norm_value = norm_values
+                out_coords = coords
+                out_corresp = corresp_values
+
+        amin_score = 0.
+        for idx1, idx2 in out_corresp:
+
+            atom_idx1 = self.surface.points[idx1].atom_idx
+            atom_idx2 = self.surface.points[idx2].atom_idx
+
+            acid1 = self.surface.molecule.atoms[atom_idx1].residue[0]
+            acid2 = self.surface.molecule.atoms[atom_idx2].residue[0]
+
+            acid_idx1 = get_amin_idx(acid1)
+            acid_idx2 = get_amin_idx(acid2)
+
+            amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
+
+        return min_norm_value, amin_score / len(out_corresp)
+
 
     @cached_property
     def amines(self) -> ndarray:

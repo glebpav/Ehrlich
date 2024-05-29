@@ -63,7 +63,7 @@ def get_rotation_matrix(angle_in_degree, axis):
 
 
 # rotate vector by vector and
-def get_rotated_vector(vector, angle_in_degree, axis):
+def get_rotated_vector(vector, angle_in_degree, axis: str):
     return np.dot(vector, get_rotation_matrix(angle_in_degree, axis))
 
 

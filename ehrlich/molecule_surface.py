@@ -1,6 +1,7 @@
 import os
 import pickle
 import sys
+from typing import List
 
 import pyvista as pv
 import pyacvd
@@ -22,7 +23,13 @@ from ehrlich.utils.math_utils import *
 
 
 class Point:
-    def __init__(self, origin_coords=None, shrunk_coords=None, atom_idx=None, neighbors_points_idx=None):
+    def __init__(
+            self,
+            origin_coords: np.ndarray = None,
+            shrunk_coords: np.ndarray = None,
+            atom_idx=None,
+            neighbors_points_idx=None
+    ):
         self.origin_coords = origin_coords
         self.shrunk_coords = shrunk_coords
         self.atom_idx = atom_idx
@@ -114,10 +121,10 @@ class Point:
 
 
 class MoleculeSurface:
-    def __init__(self, points, bonds):
+    def __init__(self, points: List[Point], bonds):
         self.__molecule = None
         self.points = points  # list[Points]
-        self.bonds = bonds  # [(1, 2, 4), (2, 5, 7, 7) ... ] - list[Tuple([int])]
+        self.bonds = bonds  # [(1, 2, 4), (2, 5, 7, 7) ... ] - List[Tuple([int])]
         self.faces = None
         # self.bonds = self.parse_points_bonds()
 
@@ -243,7 +250,7 @@ class MoleculeSurface:
         points = []
         for point_idx in range(len(output_mesh.points)):
             points.append(Point(
-                origin_coords=[0, 0, 0],
+                origin_coords=np.array([0, 0, 0]),
                 shrunk_coords=output_mesh.points[point_idx],
                 neighbors_points_idx=adj[point_idx],
             ))
