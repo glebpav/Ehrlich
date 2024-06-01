@@ -20,7 +20,7 @@ class MoleculeStructure(Molecule, Mesh):
                 ):
         
         Molecule.__init__(self, anames, acoords, resnum, resnames)
-        vamap: List[int] = None # len = number of mesh vertixes. Value - index of closest atom.
+        vamap: List[int] = None # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
         
         
     @classmethod

@@ -33,6 +33,17 @@ class Mesh:
         
     def make_segments(area: float = 225):
         """
+        Samples vertixes using 'sample' method, creates Segments, 
+        calls 'expand' on segments until target area is reached.
+        Assigns list of segments to object field.
+        """
+        ...
         
+        
+    def sample(self, n: Union[float, int]) -> List[int]:
+        """
+        Evenly samples vertixes of mesh.
+        
+        :param n: if float - portion of vertixes, if int - exact number of vertixes
         """
         ...
