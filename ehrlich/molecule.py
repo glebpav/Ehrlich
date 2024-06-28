@@ -2,7 +2,6 @@ from typing import Iterable, Union
 import numpy as np
 
 
-
 class Molecule:
     
     def __init__(
@@ -17,8 +16,7 @@ class Molecule:
         self.acoords = acoords
         self.resnum = resnum
         self.resnames = resnames
-        
-        
+
     # Optional
     # def remove_inner_atoms(self):
     #     """

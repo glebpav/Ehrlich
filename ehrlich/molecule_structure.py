@@ -2,7 +2,7 @@ from typing import Iterable, Union
 from pathlib import Path
 import pickle
 import numpy as np
-from naskit.containers.pdb import NucleicAcidChain, ProteinChain
+from naskit.containers.pdb import NucleicAcidChain, ProteinChain, PdbAtom
 
 from .molecule import Molecule
 from .mesh import Mesh
@@ -28,8 +28,21 @@ class MoleculeStructure(Molecule, Mesh):
         """
         Parses chain atoms into arrays and creates MoleculeStructure object
         """
-        
-        ...
+
+        anames = []
+        acoords = []
+        resnum = []
+        resnames = []
+
+        for acid in pdb:
+            for atom in acid:
+                atom: PdbAtom = atom
+                anames.append(atom.name)
+                acoords.append(atom.coords)
+                resnum.append(atom.moln)
+                resnames.append(atom.mol_name)
+
+        acoords = np.array(acoords)
         
         return cls(anames, acoords, resnum, resnames)
         
