@@ -8,7 +8,6 @@ from stl import mesh
 import pyvista as pv
 import pyacvd
 
-
 if sys.version_info >= (3, 9):
     import importlib.resources as pkg_resources
 else:
@@ -95,22 +94,64 @@ class Mesh:
         self.neibs = fixed_mesh.neibs
         self.faces = fixed_mesh.faces
         
-    def make_segments(area: float = 225):
+    def make_segments(self, area: float = 225) -> List[Segment]:
         """
         Samples vertixes using 'sample' method, creates Segments, 
         calls 'expand' on segments until target area is reached.
         Assigns list of segments to object field.
         """
-        ...
-        
-        
+
+        segments_number = 100
+        v_idxs = self.sample(segments_number)
+        segments = []
+        for idx in v_idxs:
+            # print(type(self))
+            segment = Segment(self, idx)
+            segment.expand(area)
+            segments.append(segment)
+
+        return segments
+
+
+
     def sample(self, n: Union[float, int]) -> List[int]:
         """
         Evenly samples vertixes of mesh.
         
         :param n: if float - portion of vertixes, if int - exact number of vertixes
         """
-        ...
+
+        if isinstance(n, int):
+            pass
+        elif isinstance(n, float) and 0 < n <= 1:
+            n = int(n * len(self.vcoords))
+        else:
+            return list(range(len(self.vcoords)))
+
+        # TODO: remove redundant save
+        self.to_stl().save('buffer_surface.stl')
+        input_mesh = pv.PolyData('buffer_surface.stl')
+        clus = pyacvd.Clustering(input_mesh)
+
+        clus.subdivide(3)
+        clus.cluster(n)
+
+        output_mesh = clus.create_mesh()
+        print(len(output_mesh.points))
+
+        get_dist = lambda x, y: np.linalg.norm(x - y)
+
+        mapped_points = [0] * len(output_mesh.points)
+        for output_idx, a_coord in enumerate(output_mesh.points):
+            min_dist = get_dist(a_coord, input_mesh.points[0])
+
+            for input_idx, b_coord in enumerate(input_mesh.points):
+                new_dist = get_dist(a_coord, b_coord)
+                if new_dist < min_dist:
+                    min_dist = new_dist
+                    mapped_points[output_idx] = input_idx
+
+        return mapped_points
 
     def to_stl(self):
 
