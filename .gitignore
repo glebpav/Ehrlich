@@ -17,4 +17,5 @@ __pycache__/
 *$py.class
 /naskit-dev/
 
-.DS_
+.DS_Store
+.idea
