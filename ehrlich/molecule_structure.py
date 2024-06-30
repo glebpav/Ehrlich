@@ -8,7 +8,6 @@ from .molecule import Molecule
 from .mesh import Mesh
 
 
-
 class MoleculeStructure(Molecule, Mesh):
     
     def __init__(
@@ -63,15 +62,13 @@ class MoleculeStructure(Molecule, Mesh):
         with open(path, 'wb') as f:
             pickle.dump(self, f)
             
-            
     def __getstate__(self):
         return {
             "anames":anames, "acoords":acoords, "resnum":resnum, "resnames":resnames,
             "vcoords":vcoords, "neibs":neibs, "faces":faces, "segments":segments,
             "vamap":vamap
         }
-    
-    
+
     def __setstate__(self, d):
         self.anames = d.get("anames")
         self.acoords = d.get("acoords")

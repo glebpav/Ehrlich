@@ -1,12 +1,17 @@
+from functools import cached_property
 from typing import Iterable, Union, List, Tuple
 import numpy as np
+# from ehrlich.molecule_structure import MoleculeStructure
+
+from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx
 
 
 class Segment:
     
     def __init__(
                 self, 
-                mol, # Molecular_structure
+                # mol: MoleculeStructure,
+                mol,
                 origin_idx: int
                 ):
         """
@@ -69,11 +74,51 @@ class Segment:
 
             if area is not None:
                 if area < self.area:
-                    return
+                    break
 
             if max_envs is not None:
                 if max_envs >= len(self.envs):
-                    return
+                    break
+
+        self.amins_count = self._compute_amines()
+
+    @cached_property
+    def concavity(self) -> float:
+        # todo: full refactor
+        norm_vect = self.surface.points[self.center_point_idx].compute_norm(self.surface)
+        m = []
+        for level in self.envs_points[1:]:
+            for point_idx in level:
+                vect = (self.surface.points[point_idx].shrunk_coords
+                        - self.surface.points[self.center_point_idx].shrunk_coords)
+                vect /= np.linalg.norm(vect)
+
+                m.append(vect)
+
+        m = np.array(m)
+        self.d = norm_vect @ m.T
+
+        return np.mean(self.d)
+
+    @cached_property
+    def curvature(self) -> float:
+        # todo: full refactor
+        if self.d is None: self.concavity
+        return self.d @ self.d
+
+    def _compute_amines(self) -> np.ndarray:
+        used_idxs = [[] for _ in range(len(amino_acid_list))]
+        segment_counter = np.zeros(len(amino_acid_list), dtype=int)
+        for env_level in self.envs:
+            for point in env_level:
+                # acid = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue[0]
+                acid = self.mol.resnames[self.mol.vamap[point]]
+                # residue_num = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num
+                residue_num = self.mol.resnum[self.mol.vamap[point]]
+                if residue_num not in used_idxs[get_amin_idx(acid)]:
+                    segment_counter[get_amin_idx(acid)] += 1.
+                    used_idxs[get_amin_idx(acid)].append(residue_num)
+        return segment_counter
 
     def _area_of_faces(self, used_faces):
         out_area = 0.

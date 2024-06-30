@@ -49,10 +49,10 @@ class Mesh:
         os.system(f"pdb2pqr --ff=AMBER {path_to_pdb} {path_to_pqr}.pqr")
 
         tms_mesh_pkg = pkg_resources.files("ehrlich")
-        tms_mesh_path = tms_mesh_pkg.joinpath("TMSmesh2.1")
-        p1_path = tms_mesh_pkg.joinpath("p1.txt")
-        p2_path = tms_mesh_pkg.joinpath("p2.txt")
-        leg_path = tms_mesh_pkg.joinpath("leg.dat")
+        tms_mesh_path = tms_mesh_pkg.joinpath("tmsmesh/TMSmesh2.1")
+        p1_path = tms_mesh_pkg.joinpath("tmsmesh/p1.txt")
+        p2_path = tms_mesh_pkg.joinpath("tmsmesh/p2.txt")
+        leg_path = tms_mesh_pkg.joinpath("tmsmesh/leg.dat")
 
         shutil.copyfile(p1_path, "p1.txt")
         shutil.copyfile(p2_path, "p2.txt")
@@ -111,8 +111,6 @@ class Mesh:
             segments.append(segment)
 
         return segments
-
-
 
     def sample(self, n: Union[float, int]) -> List[int]:
         """
