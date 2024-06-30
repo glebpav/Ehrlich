@@ -16,7 +16,6 @@ else:
 from .segment import Segment
 
 
-
 class Mesh:
     
     def __init__(self):
@@ -94,7 +93,7 @@ class Mesh:
         self.neibs = fixed_mesh.neibs
         self.faces = fixed_mesh.faces
         
-    def make_segments(self, area: float = 225) -> List[Segment]:
+    def make_segments(self, area: float = 225):
         """
         Samples vertixes using 'sample' method, creates Segments, 
         calls 'expand' on segments until target area is reached.
@@ -110,7 +109,7 @@ class Mesh:
             segment.expand(area)
             segments.append(segment)
 
-        return segments
+        self.segments = segments
 
     def sample(self, n: Union[float, int]) -> List[int]:
         """

@@ -9,19 +9,18 @@ from .mesh import Mesh
 
 
 class MoleculeStructure(Molecule, Mesh):
-    
+
     def __init__(
-                self,
-                anames: Iterable[str],
-                acoords: np.ndarray, 
-                resnum: Iterable[int],
-                resnames: Iterable[str]
-                ):
-        
+            self,
+            anames: Iterable[str],
+            acoords: np.ndarray,
+            resnum: Iterable[int],
+            resnames: Iterable[str]
+    ):
         Molecule.__init__(self, anames, acoords, resnum, resnames)
-        self.vamap: List[int] = None # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
-        
-        
+        Mesh.__init__(self)
+        self.vamap: List[int] = None  # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
+
     @classmethod
     def from_pdb(cls, pdb: Union[NucleicAcidChain, ProteinChain]) -> "MoleculeStructure":
         """
@@ -42,10 +41,9 @@ class MoleculeStructure(Molecule, Mesh):
                 resnames.append(atom.mol_name)
 
         acoords = np.array(acoords)
-        
+
         return cls(anames, acoords, resnum, resnames)
-        
-        
+
     @classmethod
     def load(cls, path: Union[str, Path]) -> "MoleculeStructure":
         """
@@ -53,20 +51,25 @@ class MoleculeStructure(Molecule, Mesh):
         """
         with open(path, 'rb') as f:
             return pickle.load(f)
-        
-        
+
     def save(self, path: Union[str, Path]):
         """
         Saves self into pickle file
         """
         with open(path, 'wb') as f:
             pickle.dump(self, f)
-            
+
     def __getstate__(self):
         return {
-            "anames":anames, "acoords":acoords, "resnum":resnum, "resnames":resnames,
-            "vcoords":vcoords, "neibs":neibs, "faces":faces, "segments":segments,
-            "vamap":vamap
+            "anames": self.anames,
+            "acoords": self.acoords,
+            "resnum": self.resnum,
+            "resnames": self.resnames,
+            "vcoords": self.vcoords,
+            "neibs": self.neibs,
+            "faces": self.faces,
+            "segments": self.segments,
+            "vamap": self.vamap
         }
 
     def __setstate__(self, d):
@@ -79,8 +82,7 @@ class MoleculeStructure(Molecule, Mesh):
         self.faces = d.get("faces")
         self.segments = d.get("segments")
         self.vamap = d.get("vamap")
-        
-        
+
     def project(self):
         """
         Finds closest atom to each mesh vertex and writes to vamap field
@@ -93,4 +95,3 @@ class MoleculeStructure(Molecule, Mesh):
             dists = {k: v for k, v in sorted(dists.items(), key=lambda item: item[1])}
             best_atom_idx = list(dists.keys())[0]
             self.vamap[point_idx] = best_atom_idx
-    
