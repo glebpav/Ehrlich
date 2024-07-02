@@ -1,17 +1,20 @@
+import sys
 from functools import cached_property
 from typing import Iterable, Union, List, Tuple
 import numpy as np
 # from ehrlich.molecule_structure import MoleculeStructure
 
 from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
+from ehrlich.utils.icp_helper import icp_optimization
+from ehrlich.utils.math_utils import get_rotated_vector
 
 
 class Segment:
     
     def __init__(
                 self, 
-                # mol: MoleculeStructure,
-                mol,
+                mol: "MoleculeStructure",
+                # mol,
                 origin_idx: int
                 ):
         """
@@ -84,11 +87,11 @@ class Segment:
 
         self.amins_count = self._compute_amines()
 
-    def amin_similarity(self, counter2_origin: np.ndarray) -> float:
+    def amin_similarity(self, segment2: "Segment") -> float:
         score: float = 0.
 
         counter1 = self.amins_count.copy()
-        counter2 = counter2_origin.copy()
+        counter2 = segment2.amins_count.copy()
 
         for acid_idx in range(len(counter1)):
             addition_score = min(counter1[acid_idx], counter2[acid_idx])
@@ -107,8 +110,34 @@ class Segment:
             if np.sum(counter1[best_acid]) == 0 or np.sum(counter2[best_acid]) == 0:
                 counter_not_empty = False
 
-        score /= np.sum(self.amins_count) + np.sum(counter2_origin)
+        score /= np.sum(self.amins_count) + np.sum(segment2.amins_count)
         return score
+
+    def align_compare(self, other_segment) -> Tuple[float, float]:
+
+        aligned_coords1 = self._get_aligned_coords()
+        aligned_coords2 = other_segment._get_aligned_coords()
+
+        min_norm_value = sys.float_info.max
+        out_corresp = None
+        out_coords = None
+
+        for rotation_idx, rotation_angle in enumerate([0, 60, 120, 180, 270]):
+            print(f"rotation_idx: {rotation_idx}")
+            rotated_coords = np.array([get_rotated_vector(vector, rotation_angle, "z") for vector in aligned_coords1])
+            coords, norm_values, corresp_values = icp_optimization(rotated_coords, aligned_coords2)
+            if min_norm_value > norm_values:
+                min_norm_value = norm_values
+                out_coords = coords
+                out_corresp = corresp_values
+
+        amin_score = 0.
+        for idx1, idx2 in out_corresp:
+            acid_idx1 = get_amin_idx(self.mol.resnames[self.mol.vamap[idx1]])
+            acid_idx2 = get_amin_idx(self.mol.resnames[self.mol.vamap[idx2]])
+            amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
+
+        return min_norm_value, amin_score / len(out_corresp)
 
     @cached_property
     def concavity(self) -> float:
@@ -153,6 +182,23 @@ class Segment:
                                           self.mol.vcoords[self.mol.faces[face][1]],
                                           self.mol.vcoords[self.mol.faces[face][2]])
         return out_area
+
+    def _get_aligned_coords(self) -> np.ndarray:
+        center_point_coords = self.mol.vcoords[self.origin_idx]
+
+        e3 = self.mol.compute_norm(self.origin_idx)
+        g = np.array([10, 0, -(e3[0] / e3[2])])
+        e1 = g / np.linalg.norm(g)
+        e2 = np.cross(e3, e1)
+
+        t = np.array([e1, e2, e3]).T
+        t_inv = np.linalg.inv(t)
+
+        out_coords = []
+        for idx, point_idx in enumerate(self.used_points):
+            out_coords.append(np.matmul(t_inv, self.mol.vcoords[point_idx] - center_point_coords))
+
+        return np.array(out_coords)
 
 
 def _area_of_triangle(p1, p2, p3):
