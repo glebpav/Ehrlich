@@ -3,7 +3,7 @@ from typing import Iterable, Union, List, Tuple
 import numpy as np
 # from ehrlich.molecule_structure import MoleculeStructure
 
-from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx
+from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
 
 
 class Segment:
@@ -83,6 +83,32 @@ class Segment:
                     break
 
         self.amins_count = self._compute_amines()
+
+    def amin_similarity(self, counter2_origin: np.ndarray) -> float:
+        score: float = 0.
+
+        counter1 = self.amins_count.copy()
+        counter2 = counter2_origin.copy()
+
+        for acid_idx in range(len(counter1)):
+            addition_score = min(counter1[acid_idx], counter2[acid_idx])
+            score += addition_score
+            counter1[acid_idx] -= addition_score
+            counter2[acid_idx] -= addition_score
+
+        counter_not_empty = True
+        while counter_not_empty:
+            acid_idx = np.argmax(counter1)
+            best_acid = np.argmax(np.where(counter2 > 0, amin_similarity_matrix[acid_idx], 0))
+            acid_count = min(counter1[best_acid], counter2[best_acid])
+            counter1[best_acid] -= acid_count
+            counter2[best_acid] -= acid_count
+            score += amin_similarity_matrix[acid_idx][best_acid] * acid_count
+            if np.sum(counter1[best_acid]) == 0 or np.sum(counter2[best_acid]) == 0:
+                counter_not_empty = False
+
+        score /= np.sum(self.amins_count) + np.sum(counter2_origin)
+        return score
 
     @cached_property
     def concavity(self) -> float:
