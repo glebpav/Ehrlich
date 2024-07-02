@@ -65,9 +65,7 @@ class Mesh:
             lines = f.readlines()
 
         self.vcoords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)])
-
         self.faces = [tuple(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))]
-
         self.neibs = [[None]] * len(self.vcoords)
         neibs = [[-1]] * len(self.vcoords)
 
@@ -101,17 +99,16 @@ class Mesh:
         """
 
         segments_number = 100
-        v_idxs = self.sample(segments_number)
+        v_idxs = self._sample(segments_number)
         segments = []
         for idx in v_idxs:
-            # print(type(self))
             segment = Segment(self, idx)
             segment.expand(area)
             segments.append(segment)
 
         self.segments = segments
 
-    def sample(self, n: Union[float, int]) -> List[int]:
+    def _sample(self, n: Union[float, int]) -> List[int]:
         """
         Evenly samples vertixes of mesh.
         
@@ -191,3 +188,76 @@ class Mesh:
         fixed_mesh.faces = list(map(tuple, faces))
 
         return fixed_mesh
+
+    def compute_norm(self, point_idx: int) -> Union[np.ndarray, None]:
+        """
+        Computes norm of point for this surface
+        :param point_idx: index of point
+        """
+
+        if point_idx == -1 or point_idx >= len(self.vcoords):
+            print("Error no such point")
+            return None
+
+        # todo: refactor from here
+        env_by_levels = {level_idx: [] for level_idx in range(3)}
+        used_points = [point_idx]
+        for level_idx in range(3):
+            adj_points_idxs = []
+            for selected_point_idx in used_points:
+                adj_points_idxs += [adj_point_idx for adj_point_idx in self.neibs[selected_point_idx]
+                                     if adj_point_idx not in used_points]
+
+            adj_points_idxs = list(set(adj_points_idxs))
+
+            get_dist = lambda x, y: np.linalg.norm(x - y)
+
+            # sorting by cw or ccw order
+            for idx1 in range(1, len(adj_points_idxs)):
+                for idx2 in range(idx1 + 1, len(adj_points_idxs)):
+                    dist1 = get_dist(self.vcoords[adj_points_idxs[idx1 - 1]], self.vcoords[adj_points_idxs[idx2]])
+                    dist2 = get_dist(self.vcoords[adj_points_idxs[idx1 - 1]], self.vcoords[adj_points_idxs[idx1]])
+
+                    if dist1 < dist2:
+                        temp = adj_points_idxs[idx1]
+                        adj_points_idxs[idx1] = adj_points_idxs[idx2]
+                        adj_points_idxs[idx2] = temp
+
+            vect1 = self.vcoords[adj_points_idxs[0]] - self.vcoords[point_idx]
+            vect2 = self.vcoords[adj_points_idxs[1]] - self.vcoords[point_idx]
+            res_vect = np.cross(vect1, vect2)
+            center_vector = self.vcoords[point_idx]
+
+            cos_a = np.dot(res_vect, center_vector) / (np.linalg.norm(res_vect) * np.linalg.norm(center_vector))
+
+            # 1 2 3 4 ...
+            if cos_a > 0:
+                vectors_sequence = list(range(len(adj_points_idxs)))
+            # n n-1 n-2 ...
+            else:
+                vectors_sequence = list(range(len(adj_points_idxs) - 1, -1, -1))
+
+            for idx, vector_idx in enumerate(vectors_sequence):
+                env_by_levels[level_idx].append(adj_points_idxs[vectors_sequence[idx]])
+            used_points += adj_points_idxs
+
+        norm_components = []
+        for i in range(0, 3):
+            for idx in range(1, len(env_by_levels[i])):
+                # print(f"{idx=}")
+                # print(f"{env_by_levels[idx][idx-1]=}")
+                vect1 = self.vcoords[env_by_levels[i][idx - 1]] - self.vcoords[point_idx]
+                vect2 = self.vcoords[env_by_levels[i][idx]] - self.vcoords[point_idx]
+                res_vect = np.cross(vect1, vect2)
+                norm_components.append(res_vect / np.linalg.norm(res_vect))
+
+        avg_adj_vect = np.average(np.array(norm_components), axis=0)
+        norm_avg = np.array(avg_adj_vect / np.linalg.norm(avg_adj_vect))
+        cos = (np.dot(avg_adj_vect, self.vcoords[point_idx])
+                 / (np.linalg.norm(avg_adj_vect) * np.linalg.norm(self.vcoords[point_idx])))
+        is_norm_inverted = cos > 0
+
+        if not is_norm_inverted:
+            norm_avg *= -1
+
+        return norm_avg

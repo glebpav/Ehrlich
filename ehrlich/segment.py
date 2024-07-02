@@ -28,6 +28,8 @@ class Segment:
         self.area: float = 0.
         self.amins_count: np.ndarray = None
 
+        self.d = None
+
         self.used_points = []
         self.used_edges = []
 
@@ -85,14 +87,12 @@ class Segment:
     @cached_property
     def concavity(self) -> float:
         # todo: full refactor
-        norm_vect = self.surface.points[self.center_point_idx].compute_norm(self.surface)
+        norm_vect = self.mol.compute_norm(self.origin_idx)
         m = []
-        for level in self.envs_points[1:]:
+        for level in self.envs[1:]:
             for point_idx in level:
-                vect = (self.surface.points[point_idx].shrunk_coords
-                        - self.surface.points[self.center_point_idx].shrunk_coords)
+                vect = (self.mol.vcoords[point_idx] - self.mol.vcoords[self.origin_idx])
                 vect /= np.linalg.norm(vect)
-
                 m.append(vect)
 
         m = np.array(m)
