@@ -2,61 +2,61 @@ import sys
 from functools import cached_property
 from typing import Iterable, Union, List, Tuple
 import numpy as np
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import art3d
+
 # from ehrlich.molecule_structure import MoleculeStructure
 
 from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
 from ehrlich.utils.icp_helper import icp_optimization
-from ehrlich.utils.math_utils import get_rotated_vector
+from ehrlich.utils.math_utils import get_rotated_vector, area_of_triangle
+from ehrlich.utils.visualize_utils import color_list
 
 
 class Segment:
     
-    def __init__(
-                self, 
-                mol: "MoleculeStructure",
-                # mol,
-                origin_idx: int
-                ):
+    def __init__(self, mol: "MoleculeStructure", origin_idx: int):
         """
         :param mol: MoleculeStructure object this segment was built on
         :param origin_idx: index of origin vertex
-        :param envs: list of list of env indices
-        :param area: area of segment
-        :param amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment 
+        envs: list of list of env indices
+        area: area of segment
+        amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
         """
         
         self.mol = mol
         self.origin_idx = origin_idx
         self.envs: List[List[int]] = []
         self.area: float = 0.
-        self.amins_count: np.ndarray = None
+        self.amins_count: Union[np.ndarray | None] = None
+        self.envs_surfaces: Union[np.ndarray | None] = None
 
         self.d = None
 
         self.used_points = []
-        self.used_edges = []
+        self.used_faces = []
 
-        # preparing data
-        self.edge_list = [set() for _ in range(len(self.mol.vcoords))]
-        for edge_idx, edge in enumerate(self.mol.faces):
-            for point_idx in edge:
-                self.edge_list[point_idx].add(edge_idx)
+        self.face_list = [set() for _ in range(len(self.mol.vcoords))]
+        for face_idx, face in enumerate(self.mol.faces):
+            for point_idx in face:
+                self.face_list[point_idx].add(face_idx)
         
     def add_env(self):
         """
         Adds one more env to segment.
         """
 
-        new_edges, new_points = _get_neighbour_data(self.envs[-1], self.edge_list, self.mol.faces,
-                                                    self.used_points, self.used_edges)
-        self.area += self._area_of_faces(new_edges)
+        new_faces, new_points = _get_neighbour_data(self.envs[-1], self.face_list, self.mol.faces,
+                                                    self.used_points, self.used_faces)
+        self.area += self._area_of_faces(new_faces)
 
-        if len(new_edges) * len(new_points) == 0:
+        if len(new_faces) * len(new_points) == 0:
             return
 
         self.used_points += new_points
-        self.used_edges += new_edges
-        self.edge_list.append(new_edges)
+        self.used_faces += new_faces
+        self.face_list.append(new_faces)
+        self.envs_surfaces.append(new_faces)
         self.envs.append(list(new_points))
 
     def expand(self, area: float, max_envs: int = None):
@@ -70,8 +70,9 @@ class Segment:
         has_next_env = True
         self.area = 0.
         self.envs = [[self.origin_idx]]
+        self.envs_surfaces = []
         self.used_points = [self.origin_idx]
-        self.used_edges = []
+        self.used_faces = []
 
         while has_next_env:
 
@@ -178,7 +179,7 @@ class Segment:
     def _area_of_faces(self, used_faces):
         out_area = 0.
         for face in used_faces:
-            out_area += _area_of_triangle(self.mol.vcoords[self.mol.faces[face][0]],
+            out_area += area_of_triangle(self.mol.vcoords[self.mol.faces[face][0]],
                                           self.mol.vcoords[self.mol.faces[face][1]],
                                           self.mol.vcoords[self.mol.faces[face][2]])
         return out_area
@@ -200,22 +201,60 @@ class Segment:
 
         return np.array(out_coords)
 
+    def show(self, with_whole_surface: bool = False, ax=None):
 
-def _area_of_triangle(p1, p2, p3):
-    v1 = np.array(p1)
-    v2 = np.array(p2)
-    v3 = np.array(p3)
-    return 0.5 * np.linalg.norm(np.cross(v2 - v1, v3 - v1))
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection="3d")
+
+        ax_max = [0, 0, 0]
+        ax_min = [0, 0, 0]
+
+        colors = []
+        if with_whole_surface:
+            colors = ['grey'] * len(self.mol.faces)
+        else:
+            colors = ['gray'] * len(self.used_faces)
+        vert = []
+        for face_idx, face in enumerate(self.mol.faces):
+            if not with_whole_surface and face_idx not in self.used_faces:
+                continue
+
+            triple = []
+            for point in face:
+                for i in range(3):
+                    ax_min[i] = min(ax_min[i], self.mol.vcoords[point][i])
+                    ax_max[i] = max(ax_max[i], self.mol.vcoords[point][i])
+                triple.append(self.mol.vcoords[point])
+            vert.append(triple)
+
+        ax.set_xlim(ax_min[0], ax_max[0])
+        ax.set_ylim(ax_min[1], ax_max[1])
+        ax.set_zlim(ax_min[2], ax_max[2])
+
+        if with_whole_surface:
+            for face_idx, face in enumerate(self.mol.faces):
+                for level_idx, env_level in enumerate(self.envs_surfaces):
+                    if face_idx in env_level:
+                        colors[face_idx] = color_list[1]
+        else:
+            for idx in range(len(colors)):
+                colors[idx] = color_list[1]
+
+        pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black")
+        ax.add_collection(pc)
+        plt.show()
+        return ax
 
 
-def _get_neighbour_data(old_points_idxs, edge_list, points_list, used_points, used_edges):
-    neig_points, neig_edges = set(), set()
+def _get_neighbour_data(old_points_idxs, faces_list, points_list, used_points, used_faces):
+    neig_points, neig_faces = set(), set()
     for point_idx in old_points_idxs:
-        filtered_edges = list(filter(lambda item: item not in used_edges, edge_list[point_idx]))
-        neig_edges.update(filtered_edges)
-        for edge_idx in filtered_edges:
-            edge = points_list[edge_idx]
-            edge = list(filter(lambda item: item not in used_points, edge))
-            neig_points.update(edge)
-    return neig_edges, neig_points
+        filtered_faces = list(filter(lambda item: item not in used_faces, faces_list[point_idx]))
+        neig_faces.update(filtered_faces)
+        for face_idx in filtered_faces:
+            face = points_list[face_idx]
+            face = list(filter(lambda item: item not in used_points, face))
+            neig_points.update(face)
+    return neig_faces, neig_points
 

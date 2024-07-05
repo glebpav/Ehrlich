@@ -6,6 +6,7 @@ from naskit.containers.pdb import NucleicAcidChain, ProteinChain, PdbAtom
 
 from .molecule import Molecule
 from .mesh import Mesh
+from .segment import Segment
 
 
 class MoleculeStructure(Molecule, Mesh):
@@ -80,7 +81,7 @@ class MoleculeStructure(Molecule, Mesh):
         self.vcoords = d.get("vcoords")
         self.neibs = d.get("neibs")
         self.faces = d.get("faces")
-        self.segments = d.get("segments")
+        self.segments: List[Segment] = d.get("segments")
         self.vamap = d.get("vamap")
 
     def project(self):
