@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import random
 import sys
 from functools import cached_property
 from typing import Iterable, Union, List, Tuple
@@ -114,7 +117,9 @@ class Segment:
         score /= np.sum(self.amins_count) + np.sum(segment2.amins_count)
         return score
 
-    def align_compare(self, other_segment) -> Tuple[float, float]:
+    def align_compare(self, other_segment) -> SegmentAlignment:
+
+        segment_alignment = SegmentAlignment(self, other_segment)
 
         aligned_coords1 = self._get_aligned_coords()
         aligned_coords2 = other_segment._get_aligned_coords()
@@ -126,7 +131,7 @@ class Segment:
         for rotation_idx, rotation_angle in enumerate([0, 60, 120, 180, 270]):
             print(f"rotation_idx: {rotation_idx}")
             rotated_coords = np.array([get_rotated_vector(vector, rotation_angle, "z") for vector in aligned_coords1])
-            coords, norm_values, corresp_values = icp_optimization(rotated_coords, aligned_coords2)
+            coords, norm_values, corresp_values = icp_optimization(aligned_coords2, rotated_coords)
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
                 out_coords = coords
@@ -138,7 +143,12 @@ class Segment:
             acid_idx2 = get_amin_idx(self.mol.resnames[self.mol.vamap[idx2]])
             amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
 
-        return min_norm_value, amin_score / len(out_corresp)
+        segment_alignment.segment2_new_coords = out_coords
+        segment_alignment.amin_score = amin_score / len(out_corresp)
+        segment_alignment.correspondence = out_coords
+        segment_alignment.norm_dist = min_norm_value
+
+        return segment_alignment
 
     @cached_property
     def concavity(self) -> float:
@@ -232,19 +242,53 @@ class Segment:
         ax.set_ylim(ax_min[1], ax_max[1])
         ax.set_zlim(ax_min[2], ax_max[2])
 
+        max_color_idx = 10
+        selected_color = color_list[random.randint(0, max_color_idx)]
+
         if with_whole_surface:
             for face_idx, face in enumerate(self.mol.faces):
                 for level_idx, env_level in enumerate(self.envs_surfaces):
                     if face_idx in env_level:
-                        colors[face_idx] = color_list[1]
+                        colors[face_idx] = selected_color
         else:
             for idx in range(len(colors)):
-                colors[idx] = color_list[1]
+                colors[idx] = selected_color
 
         pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black")
         ax.add_collection(pc)
-        plt.show()
+        # plt.show()
         return ax
+
+
+class SegmentAlignment:
+    def __init__(self, segment1: Segment, segment2: Segment):
+        self.segment1 = segment1
+        self.segment2 = segment2
+        self.segment2_new_coords: Union[np.ndarray | None] = None
+        self.correspondence: Union[List[Tuple[int, int]] | None] = None
+        self.amin_sim: Union[float | None] = None
+        self.norm_dist: Union[float | None] = None
+
+    def show(self):
+        origin_coords1 = self.segment1.mol.vcoords
+        origin_coords2 = self.segment2.mol.vcoords
+        segment1_aligned_coords = self.segment1._get_aligned_coords()
+
+        for idx, point_idx in enumerate(self.segment2.used_points):
+            self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
+        for idx, point_idx in enumerate(self.segment1.used_points):
+            self.segment1.mol.vcoords[point_idx] = segment1_aligned_coords[idx]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(projection="3d")
+        self.segment1.show(ax=ax, with_whole_surface=False)
+        self.segment2.show(ax=ax, with_whole_surface=False)
+        plt.show()
+
+        for idx, point_idx in enumerate(self.segment2.used_points):
+            self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
+        for idx, point_idx in enumerate(self.segment1.used_points):
+            self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
 
 
 def _get_neighbour_data(old_points_idxs, faces_list, points_list, used_points, used_faces):
