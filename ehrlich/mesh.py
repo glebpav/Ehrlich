@@ -1,12 +1,16 @@
+import math
 import os
 import shutil
 import sys
+from functools import cached_property
 from typing import Iterable, Union, List, Tuple
 import numpy as np
 
 from stl import mesh
 import pyvista as pv
 import pyacvd
+
+from .utils.math_utils import area_of_triangle
 
 if sys.version_info >= (3, 9):
     import importlib.resources as pkg_resources
@@ -98,7 +102,9 @@ class Mesh:
         Assigns list of segments to object field.
         """
 
-        segments_number = 100
+        segments_number = (4 * math.pi / 9) * (self._area_of_mesh / area)
+        print(f"{segments_number=}")
+
         v_idxs = self._sample(segments_number)
         segments = []
         for idx in v_idxs:
@@ -188,6 +194,15 @@ class Mesh:
         fixed_mesh.faces = list(map(tuple, faces))
 
         return fixed_mesh
+
+    @cached_property
+    def _area_of_mesh(self) -> float:
+        out_area = 0.
+        for face in self.faces:
+            out_area += area_of_triangle(self.vcoords[face[0]],
+                                         self.vcoords[face[1]],
+                                         self.vcoords[face[2]])
+        return out_area
 
     def compute_norm(self, point_idx: int) -> Union[np.ndarray, None]:
         """

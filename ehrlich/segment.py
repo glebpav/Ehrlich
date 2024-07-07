@@ -150,67 +150,6 @@ class Segment:
 
         return segment_alignment
 
-    @cached_property
-    def concavity(self) -> float:
-        # todo: full refactor
-        norm_vect = self.mol.compute_norm(self.origin_idx)
-        m = []
-        for level in self.envs[1:]:
-            for point_idx in level:
-                vect = (self.mol.vcoords[point_idx] - self.mol.vcoords[self.origin_idx])
-                vect /= np.linalg.norm(vect)
-                m.append(vect)
-
-        m = np.array(m)
-        self.d = norm_vect @ m.T
-
-        return np.mean(self.d)
-
-    @cached_property
-    def curvature(self) -> float:
-        # todo: full refactor
-        if self.d is None: self.concavity
-        return self.d @ self.d
-
-    def _compute_amines(self) -> np.ndarray:
-        used_idxs = [[] for _ in range(len(amino_acid_list))]
-        segment_counter = np.zeros(len(amino_acid_list), dtype=int)
-        for env_level in self.envs:
-            for point in env_level:
-                # acid = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue[0]
-                acid = self.mol.resnames[self.mol.vamap[point]]
-                # residue_num = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num
-                residue_num = self.mol.resnum[self.mol.vamap[point]]
-                if residue_num not in used_idxs[get_amin_idx(acid)]:
-                    segment_counter[get_amin_idx(acid)] += 1.
-                    used_idxs[get_amin_idx(acid)].append(residue_num)
-        return segment_counter
-
-    def _area_of_faces(self, used_faces):
-        out_area = 0.
-        for face in used_faces:
-            out_area += area_of_triangle(self.mol.vcoords[self.mol.faces[face][0]],
-                                          self.mol.vcoords[self.mol.faces[face][1]],
-                                          self.mol.vcoords[self.mol.faces[face][2]])
-        return out_area
-
-    def _get_aligned_coords(self) -> np.ndarray:
-        center_point_coords = self.mol.vcoords[self.origin_idx]
-
-        e3 = self.mol.compute_norm(self.origin_idx)
-        g = np.array([10, 0, -(e3[0] / e3[2])])
-        e1 = g / np.linalg.norm(g)
-        e2 = np.cross(e3, e1)
-
-        t = np.array([e1, e2, e3]).T
-        t_inv = np.linalg.inv(t)
-
-        out_coords = []
-        for idx, point_idx in enumerate(self.used_points):
-            out_coords.append(np.matmul(t_inv, self.mol.vcoords[point_idx] - center_point_coords))
-
-        return np.array(out_coords)
-
     def show(self, with_whole_surface: bool = False, ax=None):
 
         if ax is None:
@@ -258,6 +197,67 @@ class Segment:
         ax.add_collection(pc)
         # plt.show()
         return ax
+
+    @cached_property
+    def concavity(self) -> float:
+        # todo: full refactor
+        norm_vect = self.mol.compute_norm(self.origin_idx)
+        m = []
+        for level in self.envs[1:]:
+            for point_idx in level:
+                vect = (self.mol.vcoords[point_idx] - self.mol.vcoords[self.origin_idx])
+                vect /= np.linalg.norm(vect)
+                m.append(vect)
+
+        m = np.array(m)
+        self.d = norm_vect @ m.T
+
+        return np.mean(self.d)
+
+    @cached_property
+    def curvature(self) -> float:
+        # todo: full refactor
+        if self.d is None: self.concavity
+        return self.d @ self.d
+
+    def _compute_amines(self) -> np.ndarray:
+        used_idxs = [[] for _ in range(len(amino_acid_list))]
+        segment_counter = np.zeros(len(amino_acid_list), dtype=int)
+        for env_level in self.envs:
+            for point in env_level:
+                # acid = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue[0]
+                acid = self.mol.resnames[self.mol.vamap[point]]
+                # residue_num = self.surface.molecule.atoms[self.surface.points[point].atom_idx].residue_num
+                residue_num = self.mol.resnum[self.mol.vamap[point]]
+                if residue_num not in used_idxs[get_amin_idx(acid)]:
+                    segment_counter[get_amin_idx(acid)] += 1.
+                    used_idxs[get_amin_idx(acid)].append(residue_num)
+        return segment_counter
+
+    def _area_of_faces(self, used_faces):
+        out_area = 0.
+        for face in used_faces:
+            out_area += area_of_triangle(self.mol.vcoords[self.mol.faces[face][0]],
+                                         self.mol.vcoords[self.mol.faces[face][1]],
+                                         self.mol.vcoords[self.mol.faces[face][2]])
+        return out_area
+
+    def _get_aligned_coords(self) -> np.ndarray:
+        center_point_coords = self.mol.vcoords[self.origin_idx]
+
+        e3 = self.mol.compute_norm(self.origin_idx)
+        g = np.array([10, 0, -(e3[0] / e3[2])])
+        e1 = g / np.linalg.norm(g)
+        e2 = np.cross(e3, e1)
+
+        t = np.array([e1, e2, e3]).T
+        t_inv = np.linalg.inv(t)
+
+        out_coords = []
+        for idx, point_idx in enumerate(self.used_points):
+            out_coords.append(np.matmul(t_inv, self.mol.vcoords[point_idx] - center_point_coords))
+
+        return np.array(out_coords)
 
 
 class SegmentAlignment:
