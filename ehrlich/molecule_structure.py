@@ -1,4 +1,4 @@
-from typing import Iterable, Union, List
+from typing import Iterable, Union, List, Tuple
 from pathlib import Path
 import pickle
 import numpy as np
@@ -23,7 +23,7 @@ class MoleculeStructure(Molecule, Mesh):
         self.vamap: List[int] = None  # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
 
     @classmethod
-    def from_pdb(cls, pdb: Union[NucleicAcidChain, ProteinChain]) -> "MoleculeStructure":
+    def from_pdb(cls, pdb: Union[NucleicAcidChain, ProteinChain], center_struct: bool = True) -> "MoleculeStructure":
         """
         Parses chain atoms into arrays and creates MoleculeStructure object
         """
@@ -33,6 +33,8 @@ class MoleculeStructure(Molecule, Mesh):
         resnum = []
         resnames = []
 
+        center_coords = np.array([0., 0., 0.])
+
         for acid in pdb:
             for atom in acid:
                 atom: PdbAtom = atom
@@ -41,7 +43,14 @@ class MoleculeStructure(Molecule, Mesh):
                 resnum.append(atom.moln)
                 resnames.append(atom.mol_name)
 
+                if center_struct:
+                    center_coords += np.array(atom.coords)
+
         acoords = np.array(acoords)
+
+        if center_struct:
+            center_coords /= len(acoords)
+            acoords -= center_coords
 
         return cls(anames, acoords, resnum, resnames)
 
@@ -74,15 +83,15 @@ class MoleculeStructure(Molecule, Mesh):
         }
 
     def __setstate__(self, d):
-        self.anames = d.get("anames")
-        self.acoords = d.get("acoords")
-        self.resnum = d.get("resnum")
-        self.resnames = d.get("resnames")
-        self.vcoords = d.get("vcoords")
-        self.neibs = d.get("neibs")
-        self.faces = d.get("faces")
+        self.anames: Iterable[str] = d.get("anames")
+        self.acoords: np.ndarray = d.get("acoords")
+        self.resnum: Iterable[int] = d.get("resnum")
+        self.resnames: Iterable[str] = d.get("resnames")
+        self.vcoords: np.ndarray = d.get("vcoords")
+        self.neibs: List[Tuple[int]] = d.get("neibs")
+        self.faces: List[Tuple[int, int, int]] = d.get("faces")
         self.segments: List[Segment] = d.get("segments")
-        self.vamap = d.get("vamap")
+        self.vamap: List[int] = d.get("vamap")
 
     def project(self):
         """

@@ -1,5 +1,6 @@
 import math
 import os
+import random
 import shutil
 import sys
 from functools import cached_property
@@ -35,7 +36,7 @@ class Mesh:
         self.faces: List[Tuple[int, int, int]] = None
         self.segments: List[Segment] = None
 
-    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None):
+    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, center_struct: bool = True):
         """
         Creates mesh based on molecule atoms and coords. Fills all class fields. 
         Remeshes automaticaly to fit palygon area.
@@ -94,6 +95,13 @@ class Mesh:
         self.vcoords = fixed_mesh.vcoords
         self.neibs = fixed_mesh.neibs
         self.faces = fixed_mesh.faces
+
+        if center_struct:
+            center_coords = np.array([0., 0., 0.])
+            for coord in self.vcoords:
+                center_coords += coord
+            center_coords /= len(self.vcoords)
+            self.vcoords -= center_coords
         
     def make_segments(self, area: float = 225):
         """
@@ -102,7 +110,7 @@ class Mesh:
         Assigns list of segments to object field.
         """
 
-        segments_number = (4 * math.pi / 9) * (self._area_of_mesh / area)
+        segments_number = round(math.pi * (self._area_of_mesh / area))
         print(f"{segments_number=}")
 
         v_idxs = self._sample(segments_number)
@@ -141,12 +149,13 @@ class Mesh:
 
         get_dist = lambda x, y: np.linalg.norm(x - y)
 
-        mapped_points = [0] * len(output_mesh.points)
-        for output_idx, a_coord in enumerate(output_mesh.points):
-            min_dist = get_dist(a_coord, input_mesh.points[0])
+        points_idxs = random.sample(list(range(len(output_mesh.points))), min(len(output_mesh.points), n))
+        mapped_points = [0] * n
+        for output_idx, point_idx in enumerate(points_idxs):
+            min_dist = get_dist(output_mesh.points[point_idx], input_mesh.points[0])
 
             for input_idx, b_coord in enumerate(input_mesh.points):
-                new_dist = get_dist(a_coord, b_coord)
+                new_dist = get_dist(output_mesh.points[point_idx], b_coord)
                 if new_dist < min_dist:
                     min_dist = new_dist
                     mapped_points[output_idx] = input_idx
