@@ -22,6 +22,9 @@ from .segment import Segment
 
 
 class Mesh:
+    """
+    Surface implementation for molecule structure
+    """
     
     def __init__(self):
         """
@@ -42,6 +45,8 @@ class Mesh:
         Remeshes automaticaly to fit palygon area.
         
         :param poly_area: target area of a triangle polygon.
+        :param path_to_pdb: path to pdb file
+        :param center_struct: if true - geometry center of vertices will be in (0; 0; 0)
         """
 
         d = 0.6
@@ -163,7 +168,6 @@ class Mesh:
         return mapped_points
 
     def to_stl(self):
-
         """
         Prepare surface to save in stl
         just write o.to_stl().save('name.stl') to save in stl format
@@ -176,47 +180,11 @@ class Mesh:
                 mesh_object.vectors[i][j] = self.vcoords[f[j]]
         return mesh_object
 
-    def _get_fixed_version(self):
-        self.to_stl().save('buffer_surface.stl')
-        input_mesh = pv.PolyData('buffer_surface.stl')
-        clus = pyacvd.Clustering(input_mesh)
-
-        clus.subdivide(3)
-        clus.cluster(len(self.vcoords))
-
-        output_mesh = clus.create_mesh()
-        output_faces = [list(output_mesh.faces[1 + i * 4: (i + 1) * 4:]) for i in
-                        range(int(len(output_mesh.faces) / 4))]
-
-        adj = [set() for _ in range(len(output_mesh.points))]
-        for line in output_faces:
-            idx1, idx2, idx3 = line
-            adj[idx1].update([int(idx2), int(idx3)])
-            adj[idx2].update([int(idx1), int(idx3)])
-            adj[idx3].update([int(idx1), int(idx2)])
-
-        faces = np.array(output_faces)
-
-        fixed_mesh = Mesh()
-        fixed_mesh.vcoords = np.array(output_mesh.points)
-        fixed_mesh.neibs = [tuple(neib) for neib in adj]
-        fixed_mesh.faces = list(map(tuple, faces))
-
-        return fixed_mesh
-
-    @cached_property
-    def _area_of_mesh(self) -> float:
-        out_area = 0.
-        for face in self.faces:
-            out_area += area_of_triangle(self.vcoords[face[0]],
-                                         self.vcoords[face[1]],
-                                         self.vcoords[face[2]])
-        return out_area
-
     def compute_norm(self, point_idx: int) -> Union[np.ndarray, None]:
         """
         Computes norm of point for this surface
         :param point_idx: index of point
+        :return: norm of point or None in case no such point
         """
 
         if point_idx == -1 or point_idx >= len(self.vcoords):
@@ -268,8 +236,6 @@ class Mesh:
         norm_components = []
         for i in range(0, 3):
             for idx in range(1, len(env_by_levels[i])):
-                # print(f"{idx=}")
-                # print(f"{env_by_levels[idx][idx-1]=}")
                 vect1 = self.vcoords[env_by_levels[i][idx - 1]] - self.vcoords[point_idx]
                 vect2 = self.vcoords[env_by_levels[i][idx]] - self.vcoords[point_idx]
                 res_vect = np.cross(vect1, vect2)
@@ -285,3 +251,49 @@ class Mesh:
             norm_avg *= -1
 
         return norm_avg
+
+    def _get_fixed_version(self) -> "Mesh":
+        """
+        Make existing surface smoother by remeshing it
+        :return: Mesh object
+        """
+
+        self.to_stl().save('buffer_surface.stl')
+        input_mesh = pv.PolyData('buffer_surface.stl')
+        clus = pyacvd.Clustering(input_mesh)
+
+        clus.subdivide(3)
+        clus.cluster(len(self.vcoords))
+
+        output_mesh = clus.create_mesh()
+        output_faces = [list(output_mesh.faces[1 + i * 4: (i + 1) * 4:]) for i in
+                        range(int(len(output_mesh.faces) / 4))]
+
+        adj = [set() for _ in range(len(output_mesh.points))]
+        for line in output_faces:
+            idx1, idx2, idx3 = line
+            adj[idx1].update([int(idx2), int(idx3)])
+            adj[idx2].update([int(idx1), int(idx3)])
+            adj[idx3].update([int(idx1), int(idx2)])
+
+        faces = np.array(output_faces)
+
+        fixed_mesh = Mesh()
+        fixed_mesh.vcoords = np.array(output_mesh.points)
+        fixed_mesh.neibs = [tuple(neib) for neib in adj]
+        fixed_mesh.faces = list(map(tuple, faces))
+
+        return fixed_mesh
+
+    @cached_property
+    def _area_of_mesh(self) -> float:
+        """
+        Whole area of mesh's surface computed by sum of faces' area
+        """
+
+        out_area = 0.
+        for face in self.faces:
+            out_area += area_of_triangle(self.vcoords[face[0]],
+                                         self.vcoords[face[1]],
+                                         self.vcoords[face[2]])
+        return out_area

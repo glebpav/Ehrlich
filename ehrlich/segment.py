@@ -17,6 +17,9 @@ from ehrlich.utils.visualize_utils import color_list
 
 
 class Segment:
+    """
+    Circular region of structure surface witch used to make comparisons
+    """
     
     def __init__(self, mol: "MoleculeStructure", origin_idx: int):
         """
@@ -41,7 +44,6 @@ class Segment:
         for face_idx, face in enumerate(self.mol.faces):
             for point_idx in face:
                 self.face_list[point_idx].add(face_idx)
-
 
     def add_env(self):
         """
@@ -91,6 +93,12 @@ class Segment:
         self.amins_count = self._compute_amines()
 
     def amin_similarity(self, segment2: "Segment") -> float:
+        """
+        Computes amino acid similarity between two segments.
+        :param segment2: Segment to compute amino acid similarity for
+        :return: amino acid similarity
+        """
+
         score: float = 0.
 
         counter1 = self.amins_count.copy()
@@ -117,10 +125,21 @@ class Segment:
         return score
 
     def align(self, other_segment) -> SegmentAlignment:
+        """
+        Finds best alignment between two segments.
+        :param other_segment: Segment to align to
+        :return: SegmentAlignment object witch holds all align info
+        """
+
         segment_alignment = SegmentAlignment(self, other_segment)
         return segment_alignment
 
     def get_aligned_coords(self) -> np.ndarray:
+        """
+        Compute moved and rotated coords to make origin point in (0; 0; 0) and it's norm (0; 0; 1)
+        :return: np.ndarray of computed coords
+        """
+
         center_point_coords = self.mol.vcoords[self.origin_idx]
 
         e3 = self.mol.compute_norm(self.origin_idx)
@@ -138,6 +157,11 @@ class Segment:
         return np.array(out_coords)
 
     def draw(self, with_whole_surface: bool = False, ax=None):
+        """
+        Draw segment using plt
+        :param with_whole_surface: if true - print colored segment with left gray structure surface / if false - print only colored segment
+        :param ax: matplotlib axes object, could be omitted
+        """
 
         if ax is None:
             fig = plt.figure()
@@ -187,7 +211,9 @@ class Segment:
 
     @cached_property
     def concavity(self) -> float:
-        # todo: full refactor
+        """
+        Metric for measuring segment concavity
+        """
         norm_vect = self.mol.compute_norm(self.origin_idx)
         m = []
         for level in self.envs[1:]:
@@ -203,11 +229,17 @@ class Segment:
 
     @cached_property
     def curvature(self) -> float:
-        # todo: full refactor
+        """
+        Metric for measuring segment curvature
+        """
         if self.d is None: self.concavity
         return self.d @ self.d
 
     def _compute_amines(self) -> np.ndarray:
+        """
+        Compute amino acid counters. Count of each
+        :return: np.ndarray of all unique amins in segment
+        """
         used_idxs = [[] for _ in range(len(amino_acid_list))]
         segment_counter = np.zeros(len(amino_acid_list), dtype=int)
         for env_level in self.envs:
@@ -222,6 +254,11 @@ class Segment:
         return segment_counter
 
     def _area_of_faces(self, used_faces):
+        """
+        Compute area of whole segment
+        :param used_faces: np.ndarray of all used faces in segment
+        :return: area of whole segment
+        """
         out_area = 0.
         for face in used_faces:
             out_area += area_of_triangle(self.mol.vcoords[self.mol.faces[face][0]],
@@ -231,7 +268,14 @@ class Segment:
 
 
 class SegmentAlignment:
+    """
+    Detailed icp alignment for 2 segments
+    """
     def __init__(self, segment1: Segment, segment2: Segment):
+        """
+        :param segment1: first aligned segment
+        :param segment2: second aligned segment
+        """
         self.segment1: Segment = segment1
         self.segment2: Segment = segment2
         self.segment1_new_coords: Union[np.ndarray | None] = None
@@ -243,6 +287,10 @@ class SegmentAlignment:
         self._find_best_alignment()
 
     def _find_best_alignment(self):
+        """
+        Align 2 segments by icp algorithm witch fills left fields in this class
+        """
+
         aligned_coords1 = self.segment1.get_aligned_coords()
         aligned_coords2 = self.segment2.get_aligned_coords()
 
@@ -277,6 +325,10 @@ class SegmentAlignment:
         self.norm_dist = min_norm_value
 
     def draw(self):
+        """
+        Draw aligned segments using matplotlib
+        """
+
         origin_coords1 = np.copy(self.segment1.mol.vcoords)
         origin_coords2 = np.copy(self.segment2.mol.vcoords.copy())
 

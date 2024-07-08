@@ -10,6 +10,9 @@ from .segment import Segment
 
 
 class MoleculeStructure(Molecule, Mesh):
+    """
+    Combination of Mesh and Molecule features
+    """
 
     def __init__(
             self,

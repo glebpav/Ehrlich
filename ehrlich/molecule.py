@@ -3,6 +3,9 @@ import numpy as np
 
 
 class Molecule:
+    """
+    Molecule wrapper to save valuable .pdb information
+    """
     
     def __init__(
                 self, 
