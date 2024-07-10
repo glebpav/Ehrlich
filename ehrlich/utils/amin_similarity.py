@@ -5,6 +5,10 @@ from numpy import ndarray
 
 
 def get_best_substitution(amino_acid: int, counter: ndarray) -> int:
+    """
+    Find the best substitution amino acid with given amino acid and segment counter.
+    :return: best amin idx for substitution
+    """
     max_substitution = 0
     substitution_acid = -1
     for idx in range(len(amino_acid_list)):
@@ -16,6 +20,11 @@ def get_best_substitution(amino_acid: int, counter: ndarray) -> int:
 
 
 def get_amin_idx(amin: str) -> int:
+    """
+    Get amin acid idx by its name
+    :param amin: amin acid name
+    :return: amin acid idx
+    """
     return amino_acid_list.index(amin.lower())
 
 

@@ -136,7 +136,7 @@ class Segment:
 
     def get_aligned_coords(self) -> np.ndarray:
         """
-        Compute moved and rotated coords to make origin point in (0; 0; 0) and it's norm (0; 0; 1)
+        Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
         :return: np.ndarray of computed coords
         """
 

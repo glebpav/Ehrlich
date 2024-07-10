@@ -24,6 +24,12 @@ def get_correspondence_indices(P, Q):
 
 
 def center_data(data, exclude_indices=[]):
+    """
+    Find geometry center and center all data
+    :param data: data to center
+    :param exclude_indices: indices to exclude
+    :return: center and center of data
+    """
     reduced_data = np.delete(data, exclude_indices, axis=1)
     center = np.array([reduced_data.mean(axis=1)]).T
     return center, data - center
@@ -67,6 +73,9 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
 
 
 def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray) -> (np.ndarray, float, List[Tuple[int, int]]):
+    """
+    Compute best icp alignment
+    """
 
     p = np.array([coords_list1[:, 0], coords_list1[:, 1], coords_list1[:, 2]])
     q = np.array([coords_list2[:, 0], coords_list2[:, 1], coords_list2[:, 2]])
