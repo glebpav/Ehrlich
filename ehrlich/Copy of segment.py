@@ -134,9 +134,6 @@ class Segment:
         segment_alignment = SegmentAlignment(self, other_segment, rotation_list)
         return segment_alignment
 
-    def mol_align(self, other_mol: "MoleculeStructure") -> MoleculeAlignment:
-        pass
-
     def get_aligned_coords(self) -> np.ndarray:
         """
         Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
@@ -270,10 +267,7 @@ class Segment:
         return out_area
 
 
-class Alignment:
-    pass
-
-class SegmentAlignment(Alignment):
+class SegmentAlignment:
     """
     Detailed icp alignment for 2 segments
     """
@@ -292,7 +286,7 @@ class SegmentAlignment(Alignment):
 
         self._find_best_alignment(rotation_list)
 
-    def а_find_best_alignment(self, rotation_list: List[int]=[0, 60, 120, 180, 270]):
+    def _find_best_alignment(self, rotation_list: List[int]=[0, 60, 120, 180, 270]):
         """
         Align 2 segments by icp algorithm witch fills left fields in this class
         """
@@ -354,10 +348,6 @@ class SegmentAlignment(Alignment):
             self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
         for idx, point_idx in enumerate(self.segment2.used_points):
             self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
-
-
-class MoleculeAlignment(Alignment):
-    pass
 
 
 def _get_neighbour_data(old_points_idxs, faces_list, points_list, used_points, used_faces):
