@@ -8,6 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import art3d
 
+from ehrlich.alignment import SegmentAlignment, MoleculeAlignment
 # from ehrlich.molecule_structure import MoleculeStructure
 
 from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
@@ -137,28 +138,6 @@ class Segment:
     def mol_align(self, other_mol: "MoleculeStructure") -> MoleculeAlignment:
         pass
 
-    def get_aligned_coords(self) -> np.ndarray:
-        """
-        Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
-        :return: np.ndarray of computed coords
-        """
-
-        center_point_coords = self.mol.vcoords[self.origin_idx]
-
-        e3 = self.mol.compute_norm(self.origin_idx)
-        g = np.array([10, 0, -(e3[0] / e3[2])])
-        e1 = g / np.linalg.norm(g)
-        e2 = np.cross(e3, e1)
-
-        t = np.array([e1, e2, e3]).T
-        t_inv = np.linalg.inv(t)
-
-        out_coords = []
-        for idx, point_idx in enumerate(self.used_points):
-            out_coords.append(np.matmul(t_inv, self.mol.vcoords[point_idx] - center_point_coords))
-
-        return np.array(out_coords)
-
     def draw(self, with_whole_surface: bool = False, ax=None):
         """
         Draw segment using plt
@@ -268,96 +247,6 @@ class Segment:
                                          self.mol.vcoords[self.mol.faces[face][1]],
                                          self.mol.vcoords[self.mol.faces[face][2]])
         return out_area
-
-
-class Alignment:
-    pass
-
-class SegmentAlignment(Alignment):
-    """
-    Detailed icp alignment for 2 segments
-    """
-    def __init__(self, segment1: Segment, segment2: Segment, rotation_list):
-        """
-        :param segment1: first aligned segment
-        :param segment2: second aligned segment
-        """
-        self.segment1: Segment = segment1
-        self.segment2: Segment = segment2
-        self.segment1_new_coords: Union[np.ndarray | None] = None
-        self.segment2_new_coords: Union[np.ndarray | None] = None
-        self.correspondence: Union[List[Tuple[int, int]] | None] = None
-        self.amin_sim: Union[float | None] = None
-        self.norm_dist: Union[float | None] = None
-
-        self._find_best_alignment(rotation_list)
-
-    def а_find_best_alignment(self, rotation_list: List[int]=[0, 60, 120, 180, 270]):
-        """
-        Align 2 segments by icp algorithm witch fills left fields in this class
-        """
-
-        aligned_coords1 = self.segment1.get_aligned_coords()
-        aligned_coords2 = self.segment2.get_aligned_coords()
-
-        min_norm_value = sys.float_info.max
-        out_corresp = None
-        best_rotated_coords = None  # coords of segment1 in best rotation
-        out_coords = None  # coords of segment2 in best icp alignment for `best_rotated_coords`
-
-        # for rotation_idx, rotation_angle in enumerate([0, 60, 120, 180, 270]):
-        for rotation_idx, rotation_angle in enumerate(rotation_list):
-            print(f"rotation_idx: {rotation_idx}")
-            rotated_coords = np.array([
-                get_rotated_vector(vector, rotation_angle, "z")
-                for vector in aligned_coords1
-            ])
-            coords, norm_values, corresp_values = icp_optimization(aligned_coords2, rotated_coords)
-            if min_norm_value > norm_values:
-                min_norm_value = norm_values
-                out_coords = coords
-                best_rotated_coords = rotated_coords
-                out_corresp = corresp_values
-
-        amin_score = 0.
-        for idx1, idx2 in out_corresp:
-            acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
-            acid_idx2 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx2]])
-            amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
-
-        self.segment2_new_coords = out_coords
-        self.segment1_new_coords = best_rotated_coords
-        self.amin_score = amin_score / len(out_corresp)
-        self.correspondence = out_coords
-        self.norm_dist = min_norm_value
-
-    def draw(self):
-        """
-        Draw aligned segments using matplotlib
-        """
-
-        origin_coords1 = np.copy(self.segment1.mol.vcoords)
-        origin_coords2 = np.copy(self.segment2.mol.vcoords.copy())
-
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = self.segment1_new_coords[idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
-
-        fig = plt.figure()
-        ax = fig.add_subplot(projection="3d")
-        self.segment1.draw(ax=ax, with_whole_surface=False)
-        self.segment2.draw(ax=ax, with_whole_surface=False)
-        plt.show()
-
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
-
-
-class MoleculeAlignment(Alignment):
-    pass
 
 
 def _get_neighbour_data(old_points_idxs, faces_list, points_list, used_points, used_faces):

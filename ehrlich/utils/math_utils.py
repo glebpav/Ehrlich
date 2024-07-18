@@ -31,7 +31,7 @@ def get_rotated_vector(vector, angle_in_degree, axis: str):
     return np.dot(vector, get_rotation_matrix(angle_in_degree, axis))
 
 
-def area_of_triangle(p1, p2, p3):
+def area_of_triangle(p1, p2, p3) -> float:
     v1 = np.array(p1)
     v2 = np.array(p2)
     v3 = np.array(p3)

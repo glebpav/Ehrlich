@@ -25,7 +25,7 @@ class Mesh:
     """
     Surface implementation for molecule structure
     """
-    
+
     def __init__(self):
         """
         :param vcoords: float Nx3 matrix of vertex coordinates
@@ -33,11 +33,12 @@ class Mesh:
         :param faces: list of indices forming face
         :param segments: list of Segment objects
         """
-        
+
         self.vcoords: np.ndarray = None
         self.neibs: List[Tuple[int]] = None
         self.faces: List[Tuple[int, int, int]] = None
         self.segments: List[Segment] = None
+        self.faces_areas: Tuple[float] = None
 
     def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, center_struct: bool = True):
         """
@@ -107,7 +108,9 @@ class Mesh:
                 center_coords += coord
             center_coords /= len(self.vcoords)
             self.vcoords -= center_coords
-        
+
+        self._compute_areas()
+
     def make_segments(self, area: float = 225):
         """
         Samples vertixes using 'sample' method, creates Segments, 
@@ -198,7 +201,7 @@ class Mesh:
             adj_points_idxs = []
             for selected_point_idx in used_points:
                 adj_points_idxs += [adj_point_idx for adj_point_idx in self.neibs[selected_point_idx]
-                                     if adj_point_idx not in used_points]
+                                    if adj_point_idx not in used_points]
 
             adj_points_idxs = list(set(adj_points_idxs))
 
@@ -244,7 +247,7 @@ class Mesh:
         avg_adj_vect = np.average(np.array(norm_components), axis=0)
         norm_avg = np.array(avg_adj_vect / np.linalg.norm(avg_adj_vect))
         cos = (np.dot(avg_adj_vect, self.vcoords[point_idx])
-                 / (np.linalg.norm(avg_adj_vect) * np.linalg.norm(self.vcoords[point_idx])))
+               / (np.linalg.norm(avg_adj_vect) * np.linalg.norm(self.vcoords[point_idx])))
         is_norm_inverted = cos > 0
 
         if not is_norm_inverted:
@@ -284,6 +287,9 @@ class Mesh:
         fixed_mesh.faces = list(map(tuple, faces))
 
         return fixed_mesh
+
+    def _compute_areas(self):
+        self.faces_areas = tuple(area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces)
 
     @cached_property
     def _area_of_mesh(self) -> float:
