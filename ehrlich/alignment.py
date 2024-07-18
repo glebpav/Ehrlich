@@ -5,7 +5,7 @@ from typing import Union, Tuple, List
 import numpy as np
 from matplotlib import pyplot as plt
 
-from ehrlich.segment import Segment
+# from ehrlich.segment import Segment
 from ehrlich.utils.amin_similarity import get_amin_idx, amin_similarity_matrix
 from ehrlich.utils.icp_helper import icp_optimization
 from ehrlich.utils.math_utils import get_rotated_vector
@@ -14,9 +14,9 @@ CLOSENESS_THRESHOLD = 1.  # in Angstrom
 
 
 class Alignment(ABC):
-    def __init__(self, segment1: Segment, segment2: Segment):
-        self.segment1: Segment = segment1
-        self.segment2: Segment = segment2
+    def __init__(self, segment1: "Segment", segment2: "Segment"):
+        self.segment1: "Segment" = segment1
+        self.segment2: "Segment" = segment2
         self.segment1_new_coords: Union[np.ndarray, None] = None
         self.segment2_new_coords: Union[np.ndarray, None] = None
         self.correspondence: Union[List[Tuple[int, int]], None] = None
@@ -26,7 +26,7 @@ class Alignment(ABC):
     def z_axis_alignment(
             self,
             aligning_points: np.ndarray,
-            origin_point_idx: int,
+            origin_point_coords: np.ndarray,
             origin_norm: np.ndarray
     ) -> np.ndarray:
 
@@ -34,8 +34,6 @@ class Alignment(ABC):
         Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
         :return: np.ndarray of computed coords
         """
-
-        center_point_coords = aligning_points[origin_point_idx]
 
         e3 = origin_norm
         g = np.array([10, 0, -(e3[0] / e3[2])])
@@ -46,8 +44,8 @@ class Alignment(ABC):
         t_inv = np.linalg.inv(t)
 
         out_coords = []
-        for point_idx in aligning_points:
-            out_coords.append(np.matmul(t_inv, self.mol.vcoords[point_idx] - center_point_coords))
+        for point in aligning_points:
+            out_coords.append(np.matmul(t_inv, point - origin_point_coords))
 
         return np.array(out_coords)
 
@@ -93,14 +91,13 @@ class SegmentAlignment(Alignment):
     """
     Detailed icp alignment for 2 segments
     """
-    def __init__(self, segment1: Segment, segment2: Segment, rotation_list, closeness_threshold=CLOSENESS_THRESHOLD):
+    def __init__(self, segment1: "Segment", segment2: "Segment", rotation_list):
         """
         :param segment1: first aligned segment
         :param segment2: second aligned segment
         """
         super().__init__(segment1, segment2)
         self._find_best_alignment(rotation_list)
-        self.closeness_threshold = closeness_threshold
 
     def _find_best_alignment(self, rotation_list: List[int]=[0, 60, 120, 180, 270]):
         """
@@ -109,12 +106,12 @@ class SegmentAlignment(Alignment):
 
         aligned_coords1 = self.z_axis_alignment(
             np.array([self.segment1.mol.vcoords[point_idx] for point_idx in self.segment1.used_points]),
-            self.segment1.origin_idx,
+            self.segment1.mol.vcoords[self.segment1.origin_idx],
             self.segment1.mol.compute_norm(self.segment1.origin_idx)
         )
         aligned_coords2 = self.z_axis_alignment(
             np.array([self.segment2.mol.vcoords[point_idx] for point_idx in self.segment2.used_points]),
-            self.segment2.origin_idx,
+            self.segment2.mol.vcoords[self.segment2.origin_idx],
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 
@@ -146,10 +143,13 @@ class SegmentAlignment(Alignment):
 
 
 class MoleculeAlignment(Alignment):
-    def __init__(self, segment1: Segment, segment2: Segment):
+    def __init__(self, segment1: "Segment", segment2: "Segment", closeness_threshold=CLOSENESS_THRESHOLD):
         super().__init__(segment1, segment2)
         self.total_amin_sim: Union[float, None] = None
         self.total_dist: Union[float, None] = None
+        self.closeness_threshold: float = closeness_threshold
+
+        self._find_best_alignment()
 
     @property
     def match_area(self) -> float:
@@ -170,12 +170,12 @@ class MoleculeAlignment(Alignment):
     def _find_best_alignment(self):
         aligned_coords1 = self.z_axis_alignment(
             self.segment1.mol.vcoords,
-            self.segment1.origin_idx,
+            self.segment1.mol.vcoords[self.segment1.origin_idx],
             self.segment1.mol.compute_norm(self.segment1.origin_idx)
         )
         aligned_coords2 = self.z_axis_alignment(
             self.segment2.mol.vcoords,
-            self.segment2.origin_idx,
+            self.segment2.mol.vcoords[self.segment2.origin_idx],
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 

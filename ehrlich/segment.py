@@ -135,8 +135,15 @@ class Segment:
         segment_alignment = SegmentAlignment(self, other_segment, rotation_list)
         return segment_alignment
 
-    def mol_align(self, other_mol: "MoleculeStructure") -> MoleculeAlignment:
-        pass
+    def mol_align(self, other_segment: "Segment") -> MoleculeAlignment:
+        """
+        Finds best alignment between two molecules by segments.
+        :param other_segment: Segment to align to
+        :return: SegmentAlignment object witch holds all align info
+        """
+
+        molecule_alignment = MoleculeAlignment(self, other_segment)
+        return molecule_alignment
 
     def draw(self, with_whole_surface: bool = False, ax=None):
         """
