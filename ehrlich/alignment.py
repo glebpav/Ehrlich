@@ -1,3 +1,4 @@
+import math
 import sys
 from abc import ABC
 from typing import Union, Tuple, List
@@ -63,10 +64,12 @@ class Alignment(ABC):
 
         for rotation_idx, rotation_angle in enumerate(rotation_list):
             print(f"rotation_idx: {rotation_idx}")
-            rotated_coords = np.array([
-                get_rotated_vector(vector, rotation_angle, "z")
-                for vector in coords1
-            ])
+
+            cos = math.cos(math.radians(rotation_angle))
+            sin = math.sin(math.radians(rotation_angle))
+
+            rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin,  cos, 0], [0,    0,   1]])
+
             coords, norm_values, corresp_values = icp_optimization(coords2, rotated_coords)
             if min_norm_value > norm_values:
                 min_norm_value = norm_values

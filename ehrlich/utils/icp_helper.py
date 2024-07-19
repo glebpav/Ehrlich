@@ -56,6 +56,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     corresp_values = []
     exclude_indices = []
     for i in range(iterations):
+        print(f"icp iteration {i}")
         center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
         correspondences = get_correspondence_indices(P_centered, Q_centered)
         corresp_values.append(correspondences)
@@ -80,7 +81,7 @@ def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray) -> (np.
     p = np.array([coords_list1[:, 0], coords_list1[:, 1], coords_list1[:, 2]])
     q = np.array([coords_list2[:, 0], coords_list2[:, 1], coords_list2[:, 2]])
 
-    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=40)
+    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=30)
     out_coords = np.array([p_values[-1][:, idx] for idx in range(len(coords_list1))])
 
     return out_coords, norm_values[-1], corresp_values[-1]
