@@ -49,7 +49,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     corresp_values = []
     exclude_indices = []
     for i in range(iterations):
-        print(f"icp iteration {i}")
+        # print(f"icp iteration {i}")
         center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
         correspondences = get_correspondence_indices(P_centered, Q_centered)
         corresp_values.append(correspondences)

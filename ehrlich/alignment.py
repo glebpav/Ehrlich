@@ -86,7 +86,7 @@ class Alignment(ABC):
         self.segment2_new_coords = out_coords
         self.segment1_new_coords = best_rotated_coords
         self.amin_sim = amin_score / len(out_corresp)
-        self.correspondence = out_coords
+        self.correspondence = out_corresp
         self.norm_dist = min_norm_value
 
 
@@ -157,7 +157,10 @@ class MoleculeAlignment(Alignment):
     @property
     def match_area(self) -> float:
 
-        points_dict = {point[1]: point for point in self.correspondence}
+        if not hasattr(self.segment1.mol, 'faces_areas'):
+            self.segment1.mol.compute_areas()
+
+        points_dict = {point[0]: point[1] for point in self.correspondence}
         match_area = 0
 
         for face_idx, points in enumerate(self.segment1.mol.faces):

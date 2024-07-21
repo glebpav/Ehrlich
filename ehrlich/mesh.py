@@ -109,7 +109,7 @@ class Mesh:
             center_coords /= len(self.vcoords)
             self.vcoords -= center_coords
 
-        self._compute_areas()
+        self.compute_areas()
 
     def make_segments(self, area: float = 225):
         """
@@ -255,6 +255,9 @@ class Mesh:
 
         return norm_avg
 
+    def compute_areas(self):
+        self.faces_areas = tuple(area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces)
+
     def _get_fixed_version(self) -> "Mesh":
         """
         Make existing surface smoother by remeshing it
@@ -287,9 +290,6 @@ class Mesh:
         fixed_mesh.faces = list(map(tuple, faces))
 
         return fixed_mesh
-
-    def _compute_areas(self):
-        self.faces_areas = tuple(area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces)
 
     @cached_property
     def _area_of_mesh(self) -> float:
