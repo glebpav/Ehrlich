@@ -6,21 +6,14 @@ import numpy as np
 
 def get_correspondence_indices(P, Q):
     """For each point in P find the closest one in Q."""
-    p_size = P.shape[1]
-    q_size = Q.shape[1]
-    correspondences = []
-    for i in range(p_size):
-        p_point = P[:, i]
-        min_dist = sys.maxsize
-        chosen_idx = -1
-        for j in range(q_size):
-            q_point = Q[:, j]
-            dist = np.linalg.norm(q_point - p_point)
-            if dist < min_dist:
-                min_dist = dist
-                chosen_idx = j
-        correspondences.append((i, chosen_idx))
-    return correspondences
+
+    delta = P.T.reshape(-1, 1, 3) - Q.T
+    dists = np.linalg.norm(delta, axis=-1)
+    corresp = np.argmin(dists, axis=1)
+    indices = np.arange(len(corresp))
+    res_corresp = np.column_stack((indices, corresp))
+
+    return res_corresp
 
 
 def center_data(data, exclude_indices=[]):
@@ -78,8 +71,8 @@ def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray) -> (np.
     Compute best icp alignment
     """
 
-    p = np.array([coords_list1[:, 0], coords_list1[:, 1], coords_list1[:, 2]])
-    q = np.array([coords_list2[:, 0], coords_list2[:, 1], coords_list2[:, 2]])
+    p = coords_list1.T
+    q = coords_list2.T
 
     p_values, norm_values, corresp_values = icp_svd(p, q, iterations=30)
     out_coords = np.array([p_values[-1][:, idx] for idx in range(len(coords_list1))])
