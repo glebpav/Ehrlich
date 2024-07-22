@@ -15,7 +15,14 @@ CLOSENESS_THRESHOLD = 1.  # in Angstrom
 
 
 class Alignment(ABC):
-    def __init__(self, segment1: "Segment", segment2: "Segment"):
+    def __init__(
+            self,
+            segment1: "Segment",
+            segment2: "Segment",
+            icp_iterations: int,
+            rotations_list: List[int]
+    ):
+
         self.segment1: "Segment" = segment1
         self.segment2: "Segment" = segment2
         self.segment1_new_coords: Union[np.ndarray, None] = None
@@ -23,6 +30,13 @@ class Alignment(ABC):
         self.correspondence: Union[List[Tuple[int, int]], None] = None
         self.amin_sim: Union[float, None] = None
         self.mean_dist: Union[float, None] = None
+        self.icp_iterations = icp_iterations
+
+        if rotations_list is None:
+            print("none case")
+            rotations_list = [0]
+
+        self.rotations_list = rotations_list
 
     def z_axis_alignment(
             self,
@@ -54,7 +68,6 @@ class Alignment(ABC):
             self,
             coords1: np.ndarray,
             coords2: np.ndarray,
-            rotation_list: List[int]
     ):
 
         min_norm_value = sys.float_info.max
@@ -62,15 +75,15 @@ class Alignment(ABC):
         best_rotated_coords = None  # coords of segment1 in best rotation
         out_coords = None  # coords of segment2 in best icp alignment for `best_rotated_coords`
 
-        for rotation_idx, rotation_angle in enumerate(rotation_list):
+        for rotation_idx, rotation_angle in enumerate(self.rotations_list):
             print(f"rotation_idx: {rotation_idx}")
 
             cos = math.cos(math.radians(rotation_angle))
             sin = math.sin(math.radians(rotation_angle))
 
-            rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin,  cos, 0], [0,    0,   1]])
+            rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, corresp_values = icp_optimization(coords2, rotated_coords)
+            coords, norm_values, corresp_values = icp_optimization(coords2, rotated_coords, self.icp_iterations)
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
                 out_coords = coords
@@ -89,20 +102,45 @@ class Alignment(ABC):
         self.correspondence = out_corresp
         self.mean_dist = min_norm_value
 
+    def _draw(self, with_whole_surface: bool):
+        """
+        Draw aligned segments using matplotlib
+        """
+
+        origin_coords1 = np.copy(self.segment1.mol.vcoords)
+        origin_coords2 = np.copy(self.segment2.mol.vcoords.copy())
+
+        for idx, point_idx in enumerate(self.segment1.used_points):
+            self.segment1.mol.vcoords[point_idx] = self.segment1_new_coords[idx]
+        for idx, point_idx in enumerate(self.segment2.used_points):
+            self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(projection="3d")
+        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface)
+        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface)
+        plt.show()
+
+        for idx, point_idx in enumerate(self.segment1.used_points):
+            self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
+        for idx, point_idx in enumerate(self.segment2.used_points):
+            self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
+
 
 class SegmentAlignment(Alignment):
     """
     Detailed icp alignment for 2 segments
     """
-    def __init__(self, segment1: "Segment", segment2: "Segment", rotation_list):
+
+    def __init__(self, segment1: "Segment", segment2: "Segment", icp_iterations: int, rotation_list: List[int]):
         """
         :param segment1: first aligned segment
         :param segment2: second aligned segment
         """
-        super().__init__(segment1, segment2)
-        self._find_best_alignment(rotation_list)
+        super().__init__(segment1, segment2, icp_iterations, rotation_list)
+        self._find_best_alignment()
 
-    def _find_best_alignment(self, rotation_list: List[int]=[0, 60, 120, 180, 270]):
+    def _find_best_alignment(self):
         """
         Align 2 segments by icp algorithm witch fills left fields in this class
         """
@@ -118,40 +156,26 @@ class SegmentAlignment(Alignment):
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 
-        self.icp_alignment(aligned_coords1, aligned_coords2, rotation_list)
+        self.icp_alignment(aligned_coords1, aligned_coords2)
 
     def draw(self):
-        """
-        Draw aligned segments using matplotlib
-        """
-
-        origin_coords1 = np.copy(self.segment1.mol.vcoords)
-        origin_coords2 = np.copy(self.segment2.mol.vcoords.copy())
-
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = self.segment1_new_coords[idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
-
-        fig = plt.figure()
-        ax = fig.add_subplot(projection="3d")
-        self.segment1.draw(ax=ax, with_whole_surface=False)
-        self.segment2.draw(ax=ax, with_whole_surface=False)
-        plt.show()
-
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
+        Alignment._draw(self, False)
 
 
 class MoleculeAlignment(Alignment):
-    def __init__(self, segment1: "Segment", segment2: "Segment", closeness_threshold=CLOSENESS_THRESHOLD):
-        super().__init__(segment1, segment2)
+    def __init__(
+            self,
+            segment1: "Segment",
+            segment2: "Segment",
+            icp_iterations: int,
+            rotations_list: List[int],
+            closeness_threshold=CLOSENESS_THRESHOLD
+    ):
+
+        super().__init__(segment1, segment2, icp_iterations, rotations_list)
         self.total_amin_sim: Union[float, None] = None
         self.total_dist: Union[float, None] = None
         self.closeness_threshold: float = closeness_threshold
-
         self._find_best_alignment()
 
     @property
@@ -166,7 +190,8 @@ class MoleculeAlignment(Alignment):
         for face_idx, points in enumerate(self.segment1.mol.faces):
             close_face = True
             for point in points:
-                if np.linalg.norm(self.segment1.mol.vcoords[point] - self.segment2.mol.vcoords[points_dict[point]]) < self.closeness_threshold:
+                if (np.linalg.norm(self.segment1.mol.vcoords[point] - self.segment2.mol.vcoords[points_dict[point]])
+                        < self.closeness_threshold):
                     close_face = False
             if close_face:
                 match_area += self.segment1.mol.faces_areas[face_idx]
@@ -185,6 +210,9 @@ class MoleculeAlignment(Alignment):
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 
-        self.icp_alignment(aligned_coords1, aligned_coords2, [0, 120, 240])
+        self.icp_alignment(aligned_coords1, aligned_coords2)
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
         self.total_dist = self.mean_dist * len(self.correspondence)
+
+    def draw(self):
+        Alignment._draw(self, True)

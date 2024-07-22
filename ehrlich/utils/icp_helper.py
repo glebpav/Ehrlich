@@ -71,7 +71,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     return P_values, norm_values, corresp_values
 
 
-def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray) -> (np.ndarray, float, List[Tuple[int, int]]):
+def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray, iterations: int) -> (np.ndarray, float, List[Tuple[int, int]]):
     """
     Compute best icp alignment
     """
@@ -79,7 +79,7 @@ def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray) -> (np.
     p = coords_list1.T
     q = coords_list2.T
 
-    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=30)
+    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=iterations)
     out_coords = np.array([p_values[-1][:, idx] for idx in range(len(coords_list1))])
 
     return out_coords, norm_values[-1], corresp_values[-1]

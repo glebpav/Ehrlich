@@ -125,24 +125,28 @@ class Segment:
         score /= np.sum(self.amins_count) + np.sum(segment2.amins_count)
         return score
 
-    def align(self, other_segment, rotation_list) -> SegmentAlignment:
+    def align(self, other_segment, icp_iterations: int = 1, rotation_list: List[int] = None) -> SegmentAlignment:
         """
         Finds best alignment between two segments.
         :param other_segment: Segment to align to
+        :param icp_iterations: number of iterations to perform the ICP algorithm
+        :param rotation_list: list of rotation angles, in case `None` no rotation will not be applied
         :return: SegmentAlignment object witch holds all align info
         """
 
-        segment_alignment = SegmentAlignment(self, other_segment, rotation_list)
+        segment_alignment = SegmentAlignment(self, other_segment, icp_iterations, rotation_list)
         return segment_alignment
 
-    def mol_align(self, other_segment: "Segment") -> MoleculeAlignment:
+    def mol_align(self, other_segment: "Segment", icp_iterations: int = 1, rotation_list: List[int] = None) -> MoleculeAlignment:
         """
         Finds best alignment between two molecules by segments.
         :param other_segment: Segment to align to
+        :param icp_iterations: number of iterations to perform the ICP algorithm
+        :param rotation_list: list of rotation angles, in case `None` no rotation will not be applied
         :return: SegmentAlignment object witch holds all align info
         """
 
-        molecule_alignment = MoleculeAlignment(self, other_segment)
+        molecule_alignment = MoleculeAlignment(self, other_segment, icp_iterations, rotation_list)
         return molecule_alignment
 
     def draw(self, with_whole_surface: bool = False, ax=None):
