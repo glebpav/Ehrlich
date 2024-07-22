@@ -22,7 +22,7 @@ class Alignment(ABC):
         self.segment2_new_coords: Union[np.ndarray, None] = None
         self.correspondence: Union[List[Tuple[int, int]], None] = None
         self.amin_sim: Union[float, None] = None
-        self.norm_dist: Union[float, None] = None
+        self.mean_dist: Union[float, None] = None
 
     def z_axis_alignment(
             self,
@@ -87,7 +87,7 @@ class Alignment(ABC):
         self.segment1_new_coords = best_rotated_coords
         self.amin_sim = amin_score / len(out_corresp)
         self.correspondence = out_corresp
-        self.norm_dist = min_norm_value
+        self.mean_dist = min_norm_value
 
 
 class SegmentAlignment(Alignment):
@@ -186,11 +186,5 @@ class MoleculeAlignment(Alignment):
         )
 
         self.icp_alignment(aligned_coords1, aligned_coords2, [0, 120, 240])
-        self.total_amin_sim = len(self.correspondence) * self.amin_sim
-
-
-
-
-
-
-
+        self.total_amin_sim = self.amin_sim * len(self.correspondence)
+        self.total_dist = self.mean_dist * len(self.correspondence)

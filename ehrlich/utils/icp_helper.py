@@ -2,13 +2,11 @@ import sys
 from typing import List, Tuple
 
 import numpy as np
+import time
 
-
-def get_correspondence_indices(P, Q):
+def get_correspondence_indices(P, Q, dists):
     """For each point in P find the closest one in Q."""
 
-    delta = P.T.reshape(-1, 1, 3) - Q.T
-    dists = np.linalg.norm(delta, axis=-1)
     corresp = np.argmin(dists, axis=1)
     indices = np.arange(len(corresp))
     res_corresp = np.column_stack((indices, corresp))
@@ -51,11 +49,18 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     for i in range(iterations):
         # print(f"icp iteration {i}")
         center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
-        correspondences = get_correspondence_indices(P_centered, Q_centered)
+
+        delta = P_centered.T.reshape(-1, 1, 3) - Q_centered.T
+        dists = np.linalg.norm(delta, axis=-1)
+
+        correspondences = get_correspondence_indices(P_centered, Q_centered, dists)
         corresp_values.append(correspondences)
-        # min_len: int = min(len(P_centered[0]), len(Q_centered[0]))
-        norm_values.append(np.linalg.norm(np.array([P_centered[:, i] - Q_centered[:, j] for i, j in correspondences])))
-        # norm_values.append(np.linalg.norm(P_centered[:,:min_len] - Q_centered[:,:min_len]))
+
+        P_indices = correspondences[:, 0]
+        Q_indices = correspondences[:, 1]
+        corresp_dist = np.mean(dists[P_indices, Q_indices])
+        norm_values.append(corresp_dist)
+
         cov, exclude_indices = compute_cross_covariance(P_centered, Q_centered, correspondences, kernel)
         U, S, V_T = np.linalg.svd(cov)
         R = U.dot(V_T)
