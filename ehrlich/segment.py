@@ -149,11 +149,12 @@ class Segment:
         molecule_alignment = MoleculeAlignment(self, other_segment, icp_iterations, rotation_list)
         return molecule_alignment
 
-    def draw(self, with_whole_surface: bool = False, ax=None):
+    def draw(self, with_whole_surface: bool = False, ax=None, segment_alpha: float = 0.5):
         """
         Draw segment using plt
         :param with_whole_surface: if true - print colored segment with left gray structure surface / if false - print only colored segment
         :param ax: matplotlib axes object, could be omitted
+        :param segment_alpha: alpha value between 0 and 1
         """
 
         if ax is None:
@@ -197,8 +198,12 @@ class Segment:
             for idx in range(len(colors)):
                 colors[idx] = selected_color
 
-        pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black")
+        pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black", alpha=segment_alpha)
         ax.add_collection(pc)
+        norm = self.mol.compute_norm(self.origin_idx) * 3
+        origin = self.mol.vcoords[self.origin_idx]
+        plt.quiver(origin[0], origin[1], origin[2], norm[0], norm[1], norm[2])
+
         # plt.show()
         return ax
 

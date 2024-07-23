@@ -102,7 +102,7 @@ class Alignment(ABC):
         self.correspondence = out_corresp
         self.mean_dist = min_norm_value
 
-    def _draw(self, with_whole_surface: bool):
+    def _draw(self, with_whole_surface: bool, alpha: float):
         """
         Draw aligned segments using matplotlib
         """
@@ -117,8 +117,8 @@ class Alignment(ABC):
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
-        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface)
-        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface)
+        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha)
+        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha)
         plt.show()
 
         for idx, point_idx in enumerate(self.segment1.used_points):
@@ -158,8 +158,8 @@ class SegmentAlignment(Alignment):
 
         self.icp_alignment(aligned_coords1, aligned_coords2)
 
-    def draw(self):
-        Alignment._draw(self, False)
+    def draw(self, alpha: float = 0.5):
+        Alignment._draw(self, with_whole_surface=False, alpha=alpha)
 
 
 class MoleculeAlignment(Alignment):
@@ -214,5 +214,5 @@ class MoleculeAlignment(Alignment):
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
         self.total_dist = self.mean_dist * len(self.correspondence)
 
-    def draw(self):
-        Alignment._draw(self, True)
+    def draw(self, alpha: float = 0.5):
+        Alignment._draw(self, with_whole_surface=True, alpha=alpha)
