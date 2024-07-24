@@ -110,10 +110,11 @@ class Alignment(ABC):
         origin_coords1 = np.copy(self.segment1.mol.vcoords)
         origin_coords2 = np.copy(self.segment2.mol.vcoords.copy())
 
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = self.segment1_new_coords[idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
+        if not with_whole_surface:
+            for idx, point_idx in enumerate(self.segment1.used_points):
+                self.segment1.mol.vcoords[point_idx] = self.segment1_new_coords[idx]
+            for idx, point_idx in enumerate(self.segment2.used_points):
+                self.segment2.mol.vcoords[point_idx] = self.segment2_new_coords[idx]
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
@@ -121,10 +122,11 @@ class Alignment(ABC):
         self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha)
         plt.show()
 
-        for idx, point_idx in enumerate(self.segment1.used_points):
-            self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
-        for idx, point_idx in enumerate(self.segment2.used_points):
-            self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
+        if not with_whole_surface:
+            for idx, point_idx in enumerate(self.segment1.used_points):
+                self.segment1.mol.vcoords[point_idx] = origin_coords1[point_idx]
+            for idx, point_idx in enumerate(self.segment2.used_points):
+                self.segment2.mol.vcoords[point_idx] = origin_coords2[point_idx]
 
 
 class SegmentAlignment(Alignment):

@@ -40,13 +40,14 @@ class Mesh:
         self.segments: List[Segment] = None
         self.faces_areas: Tuple[float] = None
 
-    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, center_struct: bool = True):
+    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, path_to_pdb2pqr: str = 'pdb2pqr', center_struct: bool = True):
         """
         Creates mesh based on molecule atoms and coords. Fills all class fields. 
-        Remeshes automaticaly to fit palygon area.
+        Remeshes automatically to fit polygon area.
         
         :param poly_area: target area of a triangle polygon.
         :param path_to_pdb: path to pdb file
+        :param path_to_pdb2pqr: path to pdb2pqr file
         :param center_struct: if true - geometry center of vertices will be in (0; 0; 0)
         """
 
@@ -56,7 +57,7 @@ class Mesh:
         path_to_pqr = path_to_pdb.replace(".pdb", "")
 
         # converting pdb to pqr format
-        os.system(f"pdb2pqr --ff=AMBER {path_to_pdb} {path_to_pqr}.pqr")
+        os.system(f"{path_to_pdb2pqr} --ff=AMBER {path_to_pdb} {path_to_pqr}.pqr")
 
         tms_mesh_pkg = pkg_resources.files("ehrlich")
         tms_mesh_path = tms_mesh_pkg.joinpath("tmsmesh/TMSmesh2.1")
