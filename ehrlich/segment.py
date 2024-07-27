@@ -9,7 +9,6 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import art3d
 
 from ehrlich.alignment import SegmentAlignment, MoleculeAlignment
-# from ehrlich.molecule_structure import MoleculeStructure
 
 from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
 from ehrlich.utils.icp_helper import icp_optimization
@@ -31,11 +30,11 @@ class Segment:
         amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
         """
         
-        self.mol = mol
+        self.mol: "MoleculeStructure" = mol
         self.origin_idx = origin_idx
         self.envs: List[List[int]] = []
         self.area: float = 0.
-        self.amins_count: Union[np.ndarray | None] = None
+        # self.amins_count: Union[np.ndarray | None] = None
         self.envs_surfaces: Union[np.ndarray | None] = None
 
         self.used_points = []
@@ -90,8 +89,6 @@ class Segment:
             if max_envs is not None:
                 if max_envs >= len(self.envs):
                     break
-
-        self.amins_count = self._compute_amines()
 
     def amin_similarity(self, segment2: "Segment") -> float:
         """
@@ -233,11 +230,16 @@ class Segment:
         if self.d is None: self.concavity
         return self.d @ self.d
 
-    def _compute_amines(self) -> np.ndarray:
+    @cached_property
+    def amins_count(self) -> np.ndarray:
         """
         Compute amino acid counters. Count of each
         :return: np.ndarray of all unique amins in segment
         """
+
+        if not hasattr(self.mol, 'vamap'):
+            self.mol.project()
+
         used_idxs = [[] for _ in range(len(amino_acid_list))]
         segment_counter = np.zeros(len(amino_acid_list), dtype=int)
         for env_level in self.envs:
