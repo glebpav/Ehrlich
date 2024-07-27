@@ -90,17 +90,20 @@ class Alignment(ABC):
                 best_rotated_coords = rotated_coords
                 out_corresp = corresp_values
 
+        self.segment2_new_coords = out_coords
+        self.segment1_new_coords = best_rotated_coords
+        self.correspondence = out_corresp
+        self.mean_dist = min_norm_value
+
+    def compute_amin_sim(self):
+
         amin_score = 0.
-        for idx1, idx2 in out_corresp:
+        for idx1, idx2 in self.correspondence:
             acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
             acid_idx2 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx2]])
             amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
 
-        self.segment2_new_coords = out_coords
-        self.segment1_new_coords = best_rotated_coords
-        self.amin_sim = amin_score / len(out_corresp)
-        self.correspondence = out_corresp
-        self.mean_dist = min_norm_value
+        self.amin_sim = amin_score / len(self.correspondence)
 
     def _draw(self, with_whole_surface: bool, alpha: float):
         """
@@ -159,6 +162,7 @@ class SegmentAlignment(Alignment):
         )
 
         self.icp_alignment(aligned_coords1, aligned_coords2)
+        self.compute_amin_sim()
 
     def draw(self, alpha: float = 0.5):
         Alignment._draw(self, with_whole_surface=False, alpha=alpha)
@@ -179,6 +183,7 @@ class MoleculeAlignment(Alignment):
         self.total_dist: Union[float, None] = None
         self.closeness_threshold: float = closeness_threshold
         self._find_best_alignment()
+        self.compute_amin_sim()
 
     @property
     def match_area(self) -> float:
@@ -213,6 +218,7 @@ class MoleculeAlignment(Alignment):
         )
 
         self.icp_alignment(aligned_coords1, aligned_coords2)
+        self.compute_amin_sim()
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
         self.total_dist = self.mean_dist * len(self.correspondence)
 
