@@ -100,7 +100,7 @@ class Alignment(ABC):
         amin_score = 0.
         for idx1, idx2 in self.correspondence:
             acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
-            acid_idx2 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx2]])
+            acid_idx2 = get_amin_idx(self.segment2.mol.resnames[self.segment2.mol.vamap[idx2]])
             amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
 
         self.amin_sim = amin_score / len(self.correspondence)
@@ -121,8 +121,8 @@ class Alignment(ABC):
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
-        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha)
-        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha)
+        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="red")
+        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="green")
         plt.show()
 
         if not with_whole_surface:

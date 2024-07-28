@@ -96,6 +96,10 @@ class MoleculeStructure(Molecule, Mesh):
         self.segments: List[Segment] = d.get("segments")
         self.vamap: List[int] = d.get("vamap")
 
+    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, path_to_pdb2pqr: str = 'pdb2pqr', center_struct: bool = True):
+        super(MoleculeStructure, self).make_mesh(poly_area, path_to_pdb, path_to_pdb2pqr, center_struct)
+        self.project()
+
     def project(self):
         """
         Finds closest atom to each mesh vertex and writes to vamap field
