@@ -1,7 +1,7 @@
 Usage
 ===
 Read from pdb file
-```
+``` python
 import ehrlich as erl
 import naskit as nsk
 
@@ -18,7 +18,7 @@ struct = erl.MoleculeStructure.from_pdb(prot)
 ```
 
 Make mesh and parse into segments
-```
+``` python
 struct.make_mesh(poly_area=25)
 struct.project() # finds closest atom for each mesh vertex
 struct.make_segments(area=225)
@@ -26,13 +26,13 @@ struct.save("new_struct.pkl")
 ```
 
 Compare to saved structure
-```
+``` python
 # load precomputed structure
 ref = erl.MoleculeStructure.load("precomp.pkl")
 ```
 
 First fast segment comparison
-```
+``` python
 def first_filter_func(s1, s2):
 	# uses s1.amin_sim(s2) to compare aminoacids
     # uses s.concavity and s.curvature geometry descriptors
@@ -49,7 +49,7 @@ for i, s1 in enumerate(struct.segments):
 ```
 
 Second segment comparison
-```
+``` python
 def second_filter_func(s1, s2):
 	amin_sim, mean_dist = s1.align_compare(s2)
 	if segments similar enough:

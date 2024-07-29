@@ -29,7 +29,7 @@ class Alignment(ABC):
         self.segment2_new_coords: Union[np.ndarray, None] = None
         self.correspondence: Union[List[Tuple[int, int]], None] = None
         self.amin_sim: Union[float, None] = None
-        self.mean_dist: Union[float, None] = None
+        self.geom_dist: Union[float, None] = None
         self.icp_iterations = icp_iterations
 
         if rotations_list is None:
@@ -93,7 +93,7 @@ class Alignment(ABC):
         self.segment2_new_coords = out_coords
         self.segment1_new_coords = best_rotated_coords
         self.correspondence = out_corresp
-        self.mean_dist = min_norm_value
+        self.geom_dist = min_norm_value
 
     def compute_amin_sim(self):
 
@@ -123,7 +123,6 @@ class Alignment(ABC):
         elif (len(self.segment1.mol.vcoords) == len(self.segment1_new_coords)
               and len(self.segment2.mol.vcoords) == len(self.segment2_new_coords)):
 
-            print('this case')
             self.segment1.mol.vcoords = self.segment1_new_coords
             self.segment2.mol.vcoords = self.segment2_new_coords
 
@@ -142,7 +141,6 @@ class Alignment(ABC):
         elif (len(self.segment1.mol.vcoords) == len(self.segment1_new_coords)
               and len(self.segment2.mol.vcoords) == len(self.segment2_new_coords)):
 
-            print('this case')
             self.segment1.mol.vcoords = origin_coords1
             self.segment2.mol.vcoords = origin_coords2
 
@@ -195,7 +193,7 @@ class MoleculeAlignment(Alignment):
 
         super().__init__(segment1, segment2, icp_iterations, rotations_list)
         self.total_amin_sim: Union[float, None] = None
-        self.total_dist: Union[float, None] = None
+        self.total_geom_dist: Union[float, None] = None
         self.closeness_threshold: float = closeness_threshold
         self._find_best_alignment()
         self.compute_amin_sim()
@@ -235,7 +233,7 @@ class MoleculeAlignment(Alignment):
         self.icp_alignment(aligned_coords1, aligned_coords2)
         self.compute_amin_sim()
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
-        self.total_dist = self.mean_dist * len(self.correspondence)
+        self.total_geom_dist = self.geom_dist * len(self.correspondence)
 
     def draw(self, alpha: float = 0.5):
         Alignment._draw(self, with_whole_surface=True, alpha=alpha)
