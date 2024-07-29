@@ -197,7 +197,7 @@ class Segment:
             for idx in range(len(colors)):
                 colors[idx] = color
 
-        pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor="black", alpha=segment_alpha)
+        pc = art3d.Poly3DCollection(vert, facecolors=colors, edgecolor=(0., 0., 0., segment_alpha), alpha=segment_alpha)
         ax.add_collection(pc)
         norm = self.mol.compute_norm(self.origin_idx) * 3
         origin = self.mol.vcoords[self.origin_idx]
