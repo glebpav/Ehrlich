@@ -119,7 +119,7 @@ class Mesh:
         Assigns list of segments to object field.
         """
 
-        segments_number = round(math.pi * (self._area_of_mesh / area))
+        segments_number = round(math.pi * (self.area_of_mesh / area))
         print(f"{segments_number=}")
 
         v_idxs = self._sample(segments_number)
@@ -195,7 +195,6 @@ class Mesh:
             print("Error no such point")
             return None
 
-        # todo: refactor from here
         env_by_levels = {level_idx: [] for level_idx in range(3)}
         used_points = [point_idx]
         for level_idx in range(3):
@@ -293,7 +292,7 @@ class Mesh:
         return fixed_mesh
 
     @cached_property
-    def _area_of_mesh(self) -> float:
+    def area_of_mesh(self) -> float:
         """
         Whole area of mesh's surface computed by sum of faces' area
         """

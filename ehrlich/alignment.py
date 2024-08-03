@@ -144,6 +144,11 @@ class Alignment(ABC):
             self.segment1.mol.vcoords = origin_coords1
             self.segment2.mol.vcoords = origin_coords2
 
+    def stat(self):
+        return {
+            "amin_sim": round(self.amin_sim, 4),
+            "geom_dist": round(self.geom_dist, 4),
+        }
 
 class SegmentAlignment(Alignment):
     """
@@ -218,6 +223,11 @@ class MoleculeAlignment(Alignment):
 
         return match_area
 
+    @property
+    def match_area_score(self) -> float:
+        return self.match_area / (self.segment1.mol.area_of_mesh + self.segment2.mol.area_of_mesh - self.match_area)
+
+
     def _find_best_alignment(self):
         aligned_coords1 = self.z_axis_alignment(
             self.segment1.mol.vcoords,
@@ -237,3 +247,12 @@ class MoleculeAlignment(Alignment):
 
     def draw(self, alpha: float = 0.5):
         Alignment._draw(self, with_whole_surface=True, alpha=alpha)
+        
+    def stat(self):
+        return {
+            **super().stat(),
+            "total_amin_sim": round(self.total_amin_sim, 4),
+            "total_geom_dist": round(self.total_geom_dist, 4),
+            "match_area": round(self.match_area, 4),
+            "match_area_score": round(self.match_area_score, 4)
+        }
