@@ -27,7 +27,7 @@ class Alignment(ABC):
         self.segment2: "Segment" = segment2
         self.segment1_new_coords: Union[np.ndarray, None] = None
         self.segment2_new_coords: Union[np.ndarray, None] = None
-        self.correspondence: Union[List[Tuple[int, int]], None] = None
+        self.correspondence: Union[List[Tuple[int, int]], None] = None  # [List[Tuple[idx_2_segment, idx_1_segment]]
         self.amin_sim: Union[float, None] = None
         self.geom_dist: Union[float, None] = None
         self.icp_iterations = icp_iterations
@@ -98,7 +98,7 @@ class Alignment(ABC):
     def compute_amin_sim(self):
 
         amin_score = 0.
-        for idx1, idx2 in self.correspondence:
+        for idx2, idx1 in self.correspondence:
             acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
             acid_idx2 = get_amin_idx(self.segment2.mol.resnames[self.segment2.mol.vamap[idx2]])
             amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
@@ -212,10 +212,10 @@ class MoleculeAlignment(Alignment):
         points_dict = {point[0]: point[1] for point in self.correspondence}
         match_area = 0
 
-        for face_idx, points in enumerate(self.segment1.mol.faces):
+        for face_idx, points in enumerate(self.segment2.mol.faces):
             close_face = True
             for point in points:
-                if (np.linalg.norm(self.segment1.mol.vcoords[point] - self.segment2.mol.vcoords[points_dict[point]])
+                if (np.linalg.norm(self.segment2.mol.vcoords[point] - self.segment1.mol.vcoords[points_dict[point]])
                         < self.closeness_threshold):
                     close_face = False
             if close_face:
