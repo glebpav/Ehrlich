@@ -40,16 +40,17 @@ def compute_cross_covariance(P, Q, correspondences, kernel=lambda diff: 1.0):
 
 def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     """ Perform ICP using SVD. """
-    center_of_Q, Q_centered = center_data(Q)
+    # center_of_Q, Q_centered = center_data(Q)
     norm_value = 0.
     P_copy = P.copy()
     corresp_values = None
     exclude_indices = []
     for i in range(iterations):
-        # print(f"icp iteration {i}")
-        center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
+        print(f"icp iteration {i}")
+        # center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
 
-        delta = P_centered.T.reshape(-1, 1, 3) - Q_centered.T
+        # delta = P_copy.T.reshape(-1, 1, 3) - Q_centered.T
+        delta = P_copy.T.reshape(-1, 1, 3) - Q.T
         dists = np.linalg.norm(delta, axis=-1)
 
         correspondences = get_correspondence_indices(dists)
@@ -59,11 +60,13 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
         Q_indices = correspondences[:, 1]
         norm_value = np.mean(dists[P_indices, Q_indices])
 
-        cov, exclude_indices = compute_cross_covariance(P_centered, Q_centered, correspondences, kernel)
+        # cov, exclude_indices = compute_cross_covariance(P_copy, Q_centered, correspondences, kernel)
+        cov, exclude_indices = compute_cross_covariance(P_copy, Q, correspondences, kernel)
         U, S, V_T = np.linalg.svd(cov)
         R = U.dot(V_T)
-        t = center_of_Q - R.dot(center_of_P)
-        P_copy = R.dot(P_copy) + t
+        # t = center_of_Q - R.dot(center_of_P)
+        # P_copy = R.dot(P_copy) + t
+        P_copy = R.dot(P_copy)
     return P_copy, norm_value, corresp_values
 
 

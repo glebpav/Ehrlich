@@ -38,7 +38,7 @@ class Mesh:
         self.neibs: List[Tuple[int]] = None
         self.faces: List[Tuple[int, int, int]] = None
         self.segments: List[Segment] = None
-        self.faces_areas: Tuple[float] = None
+        self.faces_areas: np.ndarray = None # List[int]
 
     def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, path_to_pdb2pqr: str = 'pdb2pqr', center_struct: bool = True):
         """
@@ -120,11 +120,12 @@ class Mesh:
         """
 
         segments_number = round(math.pi * (self.area_of_mesh / area))
-        print(f"{segments_number=}")
+        # print(f"{segments_number=}")
 
         v_idxs = self._sample(segments_number)
         segments = []
-        for idx in v_idxs:
+        for iteration, idx in enumerate(v_idxs):
+            print(f"{iteration} out of {segments_number}")
             segment = Segment(self, idx)
             segment.expand(area)
             segments.append(segment)
@@ -256,7 +257,7 @@ class Mesh:
         return norm_avg
 
     def compute_areas(self):
-        self.faces_areas = tuple(area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces)
+        self.faces_areas = np.array([area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces])
 
     def _get_fixed_version(self) -> "Mesh":
         """

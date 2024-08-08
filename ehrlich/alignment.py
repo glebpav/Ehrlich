@@ -105,7 +105,13 @@ class Alignment(ABC):
 
         self.amin_sim = amin_score / len(self.correspondence)
 
-    def _draw(self, with_whole_surface: bool, alpha: float):
+    def _draw(
+            self,
+            with_whole_surface: bool,
+            alpha: float,
+            colored_faces_segment1: List[int] = None,
+            colored_faces_segment2: List[int] = None
+    ):
         """
         Draw aligned segments using matplotlib
         """
@@ -128,8 +134,8 @@ class Alignment(ABC):
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
-        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="red")
-        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="green")
+        self.segment1.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="red", colored_faces=colored_faces_segment1)
+        self.segment2.draw(ax=ax, with_whole_surface=with_whole_surface, segment_alpha=alpha, color="green", colored_faces=colored_faces_segment2)
         plt.show()
 
         if not with_whole_surface:
@@ -149,6 +155,7 @@ class Alignment(ABC):
             "amin_sim": round(self.amin_sim, 4),
             "geom_dist": round(self.geom_dist, 4),
         }
+
 
 class SegmentAlignment(Alignment):
     """
@@ -199,6 +206,8 @@ class MoleculeAlignment(Alignment):
         super().__init__(segment1, segment2, icp_iterations, rotations_list)
         self.total_amin_sim: Union[float, None] = None
         self.total_geom_dist: Union[float, None] = None
+        self.matching_segments1: Union[List[int], None] = None
+        self.matching_segments2: Union[List[int], None] = None
         self.closeness_threshold: float = closeness_threshold
         self._find_best_alignment()
         self.compute_amin_sim()
@@ -209,24 +218,23 @@ class MoleculeAlignment(Alignment):
         if not hasattr(self.segment1.mol, 'faces_areas'):
             self.segment1.mol.compute_areas()
 
-        points_dict = {point[0]: point[1] for point in self.correspondence}
-        match_area = 0
+        if not hasattr(self.segment2.mol, 'faces_areas'):
+            self.segment2.mol.compute_areas()
 
-        for face_idx, points in enumerate(self.segment2.mol.faces):
-            close_face = True
-            for point in points:
-                if (np.linalg.norm(self.segment2.mol.vcoords[point] - self.segment1.mol.vcoords[points_dict[point]])
-                        < self.closeness_threshold):
-                    close_face = False
-            if close_face:
-                match_area += self.segment1.mol.faces_areas[face_idx]
+        # print(f"{self.segment1.mol.faces_areas=}")
+        # print(f"{self.segment2.mol.faces_areas=}")
 
-        return match_area
+        match_area_segment1 = np.sum(self.segment1.mol.faces_areas[self.matching_segments1])
+        match_area_segment2 = np.sum(self.segment2.mol.faces_areas[self.matching_segments2])
+
+        print(f"{match_area_segment1=}")
+        print(f"{match_area_segment2=}")
+
+        return (match_area_segment1 + match_area_segment2) / 2
 
     @property
     def match_area_score(self) -> float:
         return self.match_area / (self.segment1.mol.area_of_mesh + self.segment2.mol.area_of_mesh - self.match_area)
-
 
     def _find_best_alignment(self):
         aligned_coords1 = self.z_axis_alignment(
@@ -245,9 +253,54 @@ class MoleculeAlignment(Alignment):
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
         self.total_geom_dist = self.geom_dist * len(self.correspondence)
 
+        self._find_matching_faces()
+
+    def _find_matching_faces(self):
+
+        self.matching_segments1, self.matching_segments2 = [], []
+
+        # idx 0 ([:, 0]): points from segment 2
+        # idx 1 ([:, 1]): points from segment 1
+        points_dict1 = {point[1]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
+        points_dict2 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
+
+        is_pair_close = np.linalg.norm(
+            self.segment1.mol.vcoords[self.correspondence[:, 1]] - self.segment2.mol.vcoords[self.correspondence[:, 0]],
+            axis=1
+        ) > self.closeness_threshold
+
+        # todo: write test
+        # for point_segment2, point_segment2 in self.correspondence:
+
+        for face_idx, points in enumerate(self.segment1.mol.faces):
+            is_face_close = True
+            for point_idx in points:
+
+                if point_idx not in self.correspondence[:, 1] or not is_pair_close[points_dict1[point_idx]]:
+                    is_face_close = False
+                    break
+
+            if is_face_close:
+                # print(f"adding from segment 1: {face_idx}")
+                self.matching_segments1.append(face_idx)
+
+        for face_idx, points in enumerate(self.segment2.mol.faces):
+            is_face_close = True
+            for point_idx in points:
+
+                if point_idx not in self.correspondence[:, 0] or not is_pair_close[points_dict2[point_idx]]:
+                    is_face_close = False
+                    break
+
+            if is_face_close:
+                # print(f"adding from segment 2: {face_idx}")
+                self.matching_segments2.append(face_idx)
+
+        # print(f"{self.matching_segments1=}\n{self.matching_segments2=}")
+
     def draw(self, alpha: float = 0.5):
-        Alignment._draw(self, with_whole_surface=True, alpha=alpha)
-        
+        Alignment._draw(self, with_whole_surface=True, alpha=alpha, colored_faces_segment1=self.matching_segments1, colored_faces_segment2=self.matching_segments2)
+
     def stat(self):
         return {
             **super().stat(),

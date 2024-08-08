@@ -29,7 +29,8 @@ class Segment:
         area: area of segment
         amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
         """
-        
+
+        print("in constructor")
         self.mol: "MoleculeStructure" = mol
         self.origin_idx = origin_idx
         self.envs: List[List[int]] = []
@@ -45,11 +46,13 @@ class Segment:
             for point_idx in face:
                 self.face_list[point_idx].add(face_idx)
 
+        print("out constructor")
+
     def add_env(self):
         """
         Adds one more env to segment.
         """
-
+        print(f"Adding env {self.area}")
         new_faces, new_points = _get_neighbour_data(self.envs[-1], self.face_list, self.mol.faces,
                                                     self.used_points, self.used_faces)
         self.area += self._area_of_faces(new_faces)
@@ -71,6 +74,7 @@ class Segment:
         :param max_envs: maximum allowed number of envs in segment
         """
 
+        print("in exapnd")
         has_next_env = True
         self.area = 0.
         self.envs = [[self.origin_idx]]
@@ -80,6 +84,7 @@ class Segment:
 
         while has_next_env:
 
+            print("in while")
             self.add_env()
 
             if area is not None:
@@ -89,6 +94,9 @@ class Segment:
             if max_envs is not None:
                 if max_envs >= len(self.envs):
                     break
+        print("out expand")
+
+
 
     def amin_similarity(self, segment2: "Segment") -> float:
         """
@@ -146,18 +154,28 @@ class Segment:
         molecule_alignment = MoleculeAlignment(self, other_segment, icp_iterations, rotation_list)
         return molecule_alignment
 
-    def draw(self, with_whole_surface: bool = False, ax=None, segment_alpha: float = 0.5, color: str = None):
+    def draw(
+            self,
+            with_whole_surface: bool = False,
+            ax=None,
+            segment_alpha: float = 0.5,
+            color: str = None,
+            colored_faces: List[int] = None):
         """
         Draw segment using plt
         :param with_whole_surface: if true - print colored segment with left gray structure surface / if false - print only colored segment
         :param ax: matplotlib axes object, could be omitted
         :param segment_alpha: alpha value between 0 and 1
         :param color: color to draw the segment, in case `None` random color will be used
+        :param colored_faces: list of indices of colored segments, in case `None` only segment faces will be drawn
         """
 
         if ax is None:
             fig = plt.figure()
             ax = fig.add_subplot(projection="3d")
+
+        if colored_faces is None:
+            colored_faces = self.envs_surfaces.flatten()
 
         ax_max = [0, 0, 0]
         ax_min = [0, 0, 0]
@@ -180,9 +198,9 @@ class Segment:
                 triple.append(self.mol.vcoords[point])
             vert.append(triple)
 
-        ax.set_xlim(ax_min[0], ax_max[0])
-        ax.set_ylim(ax_min[1], ax_max[1])
-        ax.set_zlim(ax_min[2], ax_max[2])
+        ax.set_xlim(min(ax_min), max(ax_max))
+        ax.set_ylim(min(ax_min), max(ax_max))
+        ax.set_zlim(min(ax_min), max(ax_max))
 
         max_color_idx = 15
         if color is None:
@@ -190,9 +208,8 @@ class Segment:
 
         if with_whole_surface:
             for face_idx, face in enumerate(self.mol.faces):
-                for level_idx, env_level in enumerate(self.envs_surfaces):
-                    if face_idx in env_level:
-                        colors[face_idx] = color
+                if face_idx in colored_faces:
+                    colors[face_idx] = color
         else:
             for idx in range(len(colors)):
                 colors[idx] = color
