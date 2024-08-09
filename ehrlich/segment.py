@@ -11,8 +11,7 @@ from mpl_toolkits.mplot3d import art3d
 from ehrlich.alignment import SegmentAlignment, MoleculeAlignment
 
 from ehrlich.utils.amin_similarity import amino_acid_list, get_amin_idx, amin_similarity_matrix
-from ehrlich.utils.icp_helper import icp_optimization
-from ehrlich.utils.math_utils import get_rotated_vector, area_of_triangle
+from ehrlich.utils.math_utils import area_of_triangle
 from ehrlich.utils.visualize_utils import color_list
 
 
@@ -30,8 +29,9 @@ class Segment:
         amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
         """
 
-        print("in constructor")
-        self.mol: "MoleculeStructure" = mol
+        from molecule_structure import MoleculeStructure
+
+        self.mol: MoleculeStructure = mol
         self.origin_idx = origin_idx
         self.envs: List[List[int]] = []
         self.area: float = 0.
@@ -45,8 +45,6 @@ class Segment:
         for face_idx, face in enumerate(self.mol.faces):
             for point_idx in face:
                 self.face_list[point_idx].add(face_idx)
-
-        print("out constructor")
 
     def add_env(self):
         """
@@ -74,7 +72,6 @@ class Segment:
         :param max_envs: maximum allowed number of envs in segment
         """
 
-        print("in exapnd")
         has_next_env = True
         self.area = 0.
         self.envs = [[self.origin_idx]]
@@ -84,7 +81,6 @@ class Segment:
 
         while has_next_env:
 
-            print("in while")
             self.add_env()
 
             if area is not None:
@@ -94,9 +90,8 @@ class Segment:
             if max_envs is not None:
                 if max_envs >= len(self.envs):
                     break
-        print("out expand")
 
-
+        self.envs_surfaces = np.array(self.envs_surfaces)
 
     def amin_similarity(self, segment2: "Segment") -> float:
         """
@@ -175,16 +170,23 @@ class Segment:
             ax = fig.add_subplot(projection="3d")
 
         if colored_faces is None:
+            if not isinstance(self.envs_surfaces, np.ndarray):
+                self.envs_surfaces = np.array(self.envs_surfaces)
+
             colored_faces = self.envs_surfaces.flatten()
+
+        max_color_idx = 15
+        if color is None:
+            color = color_list[random.randint(0, max_color_idx)]
 
         ax_max = [0, 0, 0]
         ax_min = [0, 0, 0]
 
-        colors = []
         if with_whole_surface:
             colors = ['grey'] * len(self.mol.faces)
         else:
             colors = ['gray'] * len(self.used_faces)
+
         vert = []
         for face_idx, face in enumerate(self.mol.faces):
             if not with_whole_surface and face_idx not in self.used_faces:
@@ -202,10 +204,6 @@ class Segment:
         ax.set_ylim(min(ax_min), max(ax_max))
         ax.set_zlim(min(ax_min), max(ax_max))
 
-        max_color_idx = 15
-        if color is None:
-            color = color_list[random.randint(0, max_color_idx)]
-
         if with_whole_surface:
             for face_idx, face in enumerate(self.mol.faces):
                 if face_idx in colored_faces:
@@ -218,7 +216,7 @@ class Segment:
         ax.add_collection(pc)
         norm = self.mol.compute_norm(self.origin_idx) * 3
         origin = self.mol.vcoords[self.origin_idx]
-        plt.quiver(origin[0], origin[1], origin[2], norm[0], norm[1], norm[2])
+        plt.quiver(origin[0], origin[1], origin[2], norm[0], norm[1], norm[2], linewidth=3)
 
         # plt.show()
         return ax
