@@ -29,7 +29,8 @@ class Alignment(ABC):
         self.segment2: Segment = segment2
         self.segment1_new_coords: Union[np.ndarray, None] = None
         self.segment2_new_coords: Union[np.ndarray, None] = None
-        self.correspondence: Union[List[Tuple[int, int]], None] = None  # [List[Tuple[idx_2_segment, idx_1_segment]]
+        self.correspondence: Union[List[Tuple[int, int]], None] = None  # [List[Tuple[idx_1_segment, idx_2_segment]] - len(segmant1.mol)
+        self.correspondence2: Union[List[Tuple[int, int]], None] = None  # [List[Tuple[idx_2_segment, idx_1_segment]] - len(segment2.mol)
         self.amin_sim: Union[float, None] = None
         self.geom_dist: Union[float, None] = None
         self.icp_iterations = icp_iterations
@@ -73,9 +74,10 @@ class Alignment(ABC):
     ):
 
         min_norm_value = sys.float_info.max
+        min_norm_value2 = sys.float_info.max
         out_corresp = None
-        best_rotated_coords = None  # coords of segment1 in best rotation
-        out_coords = None  # coords of segment2 in best icp alignment for `best_rotated_coords`
+        out_corresp2 = None
+        out_coords = None  # coords of segment1 in best icp alignment for `best_rotated_coords`
 
         for rotation_idx, rotation_angle in enumerate(self.rotations_list):
             print(f"rotation_idx: {rotation_idx}")
@@ -85,17 +87,19 @@ class Alignment(ABC):
 
             rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, corresp_values = icp_optimization(rotated_coords, coords2, self.icp_iterations)
+            coords, norm_values, norm_values2, corresp_values, corresp_values2 = icp_optimization(rotated_coords, coords2, self.icp_iterations)
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
+                min_norm_value2 = norm_values2
                 out_coords = coords
-                best_rotated_coords = rotated_coords
                 out_corresp = corresp_values
+                out_corresp2 = corresp_values2
 
         self.segment2_new_coords = coords2
         self.segment1_new_coords = out_coords
         self.correspondence = out_corresp
-        self.geom_dist = min_norm_value
+        self.correspondence2 = out_corresp2
+        self.geom_dist = (min_norm_value + min_norm_value2) / 2
 
     def compute_amin_sim(self):
 
@@ -271,26 +275,23 @@ class MoleculeAlignment(Alignment):
         self.matching_segments1, self.matching_segments2 = [], []
 
         points_dict1 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
-        points_dict2 = {point[1]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
+        points_dict2 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence2)}
 
-        is_pair_close = np.linalg.norm(
+        is_pair_close1 = np.linalg.norm(
             self.segment1_new_coords[self.correspondence[:, 0]] - self.segment2_new_coords[self.correspondence[:, 1]],
             axis=1
         ) < self.closeness_threshold
-        a = np.sort(np.linalg.norm(
-            self.segment1_new_coords[self.correspondence[:, 0]] - self.segment1_new_coords[self.correspondence[:, 1]],
+
+        is_pair_close2 = np.linalg.norm(
+            self.segment1_new_coords[self.correspondence2[:, 1]] - self.segment2_new_coords[self.correspondence2[:, 0]],
             axis=1
-        ))
-
-        print(a)
-
-        print(f"{self.closeness_threshold=}")
+        ) < self.closeness_threshold
 
         for face_idx, points in enumerate(self.segment1.mol.faces):
             is_face_close = True
             for point_idx in points:
 
-                if point_idx not in self.correspondence[:, 0] or not is_pair_close[points_dict1[point_idx]]:
+                if point_idx not in self.correspondence[:, 0] or not is_pair_close1[points_dict1[point_idx]]:
                     is_face_close = False
                     break
 
@@ -301,7 +302,7 @@ class MoleculeAlignment(Alignment):
             is_face_close = True
             for point_idx in points:
 
-                if point_idx not in self.correspondence[:, 1] or not is_pair_close[points_dict2[point_idx]]:
+                if point_idx not in self.correspondence[:, 1] or not is_pair_close2[points_dict2[point_idx]]:
                     is_face_close = False
                     break
 
