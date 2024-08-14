@@ -87,13 +87,11 @@ class Alignment(ABC):
 
             rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, norm_values2, corresp_values, corresp_values2 = icp_optimization(rotated_coords, coords2, self.icp_iterations)
+            coords, norm_values, corresp_values = icp_optimization(rotated_coords, coords2, self.icp_iterations)
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
-                min_norm_value2 = norm_values2
                 out_coords = coords
                 out_corresp = corresp_values
-                out_corresp2 = corresp_values2
 
         self.segment2_new_coords = coords2
         self.segment1_new_coords = out_coords
@@ -275,15 +273,10 @@ class MoleculeAlignment(Alignment):
         self.matching_segments1, self.matching_segments2 = [], []
 
         points_dict1 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
-        points_dict2 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence2)}
+        points_dict2 = {point[1]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
 
-        is_pair_close1 = np.linalg.norm(
+        is_pair_close = np.linalg.norm(
             self.segment1_new_coords[self.correspondence[:, 0]] - self.segment2_new_coords[self.correspondence[:, 1]],
-            axis=1
-        ) < self.closeness_threshold
-
-        is_pair_close2 = np.linalg.norm(
-            self.segment1_new_coords[self.correspondence2[:, 1]] - self.segment2_new_coords[self.correspondence2[:, 0]],
             axis=1
         ) < self.closeness_threshold
 
@@ -291,7 +284,7 @@ class MoleculeAlignment(Alignment):
             is_face_close = True
             for point_idx in points:
 
-                if point_idx not in self.correspondence[:, 0] or not is_pair_close1[points_dict1[point_idx]]:
+                if point_idx not in self.correspondence[:, 0] or not is_pair_close[points_dict1[point_idx]]:
                     is_face_close = False
                     break
 
@@ -302,7 +295,7 @@ class MoleculeAlignment(Alignment):
             is_face_close = True
             for point_idx in points:
 
-                if point_idx not in self.correspondence[:, 1] or not is_pair_close2[points_dict2[point_idx]]:
+                if point_idx not in self.correspondence[:, 1] or not is_pair_close[points_dict2[point_idx]]:
                     is_face_close = False
                     break
 

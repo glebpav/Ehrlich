@@ -169,6 +169,8 @@ class Segment:
             fig = plt.figure()
             ax = fig.add_subplot(projection="3d")
 
+
+        # todo: refactor
         if colored_faces is None:
             if not isinstance(self.envs_surfaces, np.ndarray):
                 self.envs_surfaces = np.array(self.envs_surfaces)

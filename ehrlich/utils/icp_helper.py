@@ -1,15 +1,16 @@
 import sys
 from typing import List, Tuple
+from scipy.optimize import linear_sum_assignment
 
 import numpy as np
 import time
 
+
 def get_correspondence_indices(dists):
     """For each point in P find the closest one in Q."""
 
-    corresp = np.argmin(dists, axis=1)
-    indices = np.arange(len(corresp))
-    res_corresp = np.column_stack((indices, corresp))
+    row_idxes, col_ides = linear_sum_assignment(dists)
+    res_corresp = np.column_stack((row_idxes, col_ides))
 
     return res_corresp
 
@@ -68,15 +69,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
         # P_copy = R.dot(P_copy) + t
         P_copy = R.dot(P_copy)
 
-    # second correspondence list
-    deltas = Q.T.reshape(-1, 1, 3) - P_copy.T
-    dists = np.linalg.norm(deltas, axis=-1)
-    correspondences2 = get_correspondence_indices(dists)
-    P_indices = correspondences2[:, 1]
-    Q_indices = correspondences2[:, 0]
-    norm_value2 = np.mean(dists[Q_indices, P_indices])
-
-    return P_copy, norm_value, norm_value2, corresp_values, correspondences2
+    return P_copy, norm_value, corresp_values
 
 
 def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray, iterations: int) -> (np.ndarray, float, List[Tuple[int, int]]):
@@ -87,10 +80,10 @@ def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray, iterati
     p = coords_list1.T
     q = coords_list2.T
 
-    p_values, norm_values, norm_values2, corresp_values, corresp_values2 = icp_svd(p, q, iterations=iterations)
+    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=iterations)
     out_coords = p_values.T
 
-    return out_coords, norm_values, norm_values2, corresp_values, corresp_values2
+    return out_coords, norm_values, corresp_values
 
 
 
