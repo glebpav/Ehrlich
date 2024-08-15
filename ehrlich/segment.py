@@ -169,12 +169,10 @@ class Segment:
             fig = plt.figure()
             ax = fig.add_subplot(projection="3d")
 
-
         # todo: refactor
         if colored_faces is None:
             if not isinstance(self.envs_surfaces, np.ndarray):
-                self.envs_surfaces = np.array(self.envs_surfaces)
-
+                self.envs_surfaces = np.array([point for env_level in self.envs_surfaces for point in env_level])
             colored_faces = self.envs_surfaces.flatten()
 
         max_color_idx = 15
