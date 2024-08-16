@@ -29,7 +29,7 @@ class Segment:
         amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
         """
 
-        from molecule_structure import MoleculeStructure
+        from .molecule_structure import MoleculeStructure
 
         self.mol: MoleculeStructure = mol
         self.origin_idx = origin_idx

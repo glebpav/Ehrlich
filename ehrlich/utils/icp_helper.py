@@ -6,12 +6,19 @@ import numpy as np
 import time
 
 
-def get_correspondence_indices(dists):
+def get_min_sum_correspondence(dists):
     """For each point in P find the closest one in Q."""
 
     row_idxes, col_ides = linear_sum_assignment(dists)
     res_corresp = np.column_stack((row_idxes, col_ides))
 
+    return res_corresp
+
+
+def get_min_distance_correspondence(dists):
+    corresp = np.argmin(dists, axis=1)
+    indices = np.arange(len(corresp))
+    res_corresp = np.column_stack((indices, corresp))
     return res_corresp
 
 
@@ -46,6 +53,8 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
     P_copy = P.copy()
     corresp_values = None
     exclude_indices = []
+    dists = []
+
     for i in range(iterations):
         print(f"icp iteration {i}")
         # center_of_P, P_centered = center_data(P_copy, exclude_indices=exclude_indices)
@@ -54,7 +63,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
         delta = P_copy.T.reshape(-1, 1, 3) - Q.T
         dists = np.linalg.norm(delta, axis=-1)
 
-        correspondences = get_correspondence_indices(dists)
+        correspondences = get_min_sum_correspondence(dists)
         corresp_values = correspondences
 
         P_indices = correspondences[:, 0]
@@ -69,7 +78,10 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
         # P_copy = R.dot(P_copy) + t
         P_copy = R.dot(P_copy)
 
-    return P_copy, norm_value, corresp_values
+    min_dist_corresp1 = get_min_distance_correspondence(dists)
+    min_dist_corresp2 = get_min_distance_correspondence(dists.T)
+
+    return P_copy, norm_value, corresp_values, min_dist_corresp1, min_dist_corresp2
 
 
 def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray, iterations: int) -> (np.ndarray, float, List[Tuple[int, int]]):
@@ -80,10 +92,10 @@ def icp_optimization(coords_list1: np.ndarray, coords_list2: np.ndarray, iterati
     p = coords_list1.T
     q = coords_list2.T
 
-    p_values, norm_values, corresp_values = icp_svd(p, q, iterations=iterations)
+    p_values, norm_values, corresp_values, min_dist_corresp1, min_dist_corresp2 = icp_svd(p, q, iterations=iterations)
     out_coords = p_values.T
 
-    return out_coords, norm_values, corresp_values
+    return out_coords, norm_values, corresp_values, min_dist_corresp1, min_dist_corresp2
 
 
 
