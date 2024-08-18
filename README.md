@@ -34,15 +34,15 @@ ref = erl.MoleculeStructure.load("precomp.pkl")
 First fast segment comparison
 ``` python
 def first_filter_func(s1, s2):
-	# uses s1.amin_sim(s2) to compare aminoacids
+    # uses s1.amin_sim(s2) to compare aminoacids
     # uses s.concavity and s.curvature geometry descriptors
-	if segments similar enough:
-    	return True
+    if segments similar enough:
+        return True
     return False
     
 seg_pairs = []
 for i, s1 in enumerate(struct.segments):
-	for j, s2 in enumerate(ref.segments):
+    for j, s2 in enumerate(ref.segments):
     	if first_filter_func(s1, s2):
         	seg_pairs.append((i, j))
     	
@@ -51,15 +51,15 @@ for i, s1 in enumerate(struct.segments):
 Second segment comparison
 ``` python
 def second_filter_func(s1, s2):
-	amin_sim, mean_dist = s1.align_compare(s2)
-	if segments similar enough:
+    amin_sim, mean_dist = s1.align_compare(s2)
+    if segments similar enough:
     	return True
     return False
     
 similar_pairs = []
 for i, j in seg_pairs:
-	if second_filter_func(s1.segments[i], s2.segments[j]):
-		similar_pairs.append((i, j))    	
+    if second_filter_func(s1.segments[i], s2.segments[j]):
+        similar_pairs.append((i, j))    	
 ```
 
 Align molecules on similar segments...

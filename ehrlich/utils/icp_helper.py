@@ -34,16 +34,19 @@ def center_data(data, exclude_indices=[]):
     return center, data - center
 
 
-def compute_cross_covariance(P, Q, correspondences, kernel=lambda diff: 1.0):
-    cov = np.zeros((3, 3))
-    exclude_indices = []
-    for i, j in correspondences:
-        p_point = P[:, [i]]
-        q_point = Q[:, [j]]
-        weight = kernel(p_point - q_point)
-        if weight < 0.01: exclude_indices.append(i)
-        cov += weight * q_point.dot(p_point.T)
-    return cov, exclude_indices
+def compute_cross_covariance(P, Q, correspondences):
+    p = P.T[[correspondences[:, 0]], :][0]
+    q = Q.T[[correspondences[:, 1]], :][0]
+
+    mean_p = np.mean(p, axis=0)
+    mean_q = np.mean(q, axis=0)
+
+    p_centered = p - mean_p
+    q_centered = q - mean_q
+
+    covariance_matrix = np.dot(p_centered.T, q_centered)
+
+    return covariance_matrix
 
 
 def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
@@ -71,7 +74,7 @@ def icp_svd(P, Q, iterations=10, kernel=lambda diff: 1.0):
         norm_value = np.mean(dists[P_indices, Q_indices])
 
         # cov, exclude_indices = compute_cross_covariance(P_copy, Q_centered, correspondences, kernel)
-        cov, exclude_indices = compute_cross_covariance(P_copy, Q, correspondences, kernel)
+        cov = compute_cross_covariance(P_copy, Q, correspondences)
         U, S, V_T = np.linalg.svd(cov)
         R = U.dot(V_T)
         # t = center_of_Q - R.dot(center_of_P)

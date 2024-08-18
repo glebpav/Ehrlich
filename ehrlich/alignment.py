@@ -72,7 +72,13 @@ class Alignment(ABC):
             self,
             coords1: np.ndarray,
             coords2: np.ndarray,
-    ):
+    ) -> None:
+
+        """
+        Align 2 segments using ICP algorithm
+        :param coords1: np.ndarray of coordinates of first aligning part
+        :param coords2: np.ndarray of coordinates of second aligning part
+        """
 
         min_norm_value = sys.float_info.max
         min_norm_value2 = sys.float_info.max
@@ -104,6 +110,10 @@ class Alignment(ABC):
 
     def compute_amin_sim(self):
 
+        """
+        computing amin similarity between two aligned parts
+        """
+
         amin_score = 0.
         for idx1, idx2 in self.correspondence:
             acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
@@ -121,6 +131,7 @@ class Alignment(ABC):
     ):
         """
         Draw aligned segments using matplotlib
+        :param with_whole_surface: bool
         """
 
         origin_coords1 = np.copy(self.segment1.mol.vcoords)
