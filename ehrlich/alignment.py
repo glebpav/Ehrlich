@@ -29,12 +29,13 @@ class Alignment(ABC):
         self.segment2: Segment = segment2
         self.segment1_new_coords: Union[np.ndarray, None] = None
         self.segment2_new_coords: Union[np.ndarray, None] = None
-        self.correspondence: Union[List[Tuple[int, int]], None] = None  # [List[Tuple[idx_1_segment, idx_2_segment]] - len(segmant1.mol)
+        self.correspondence: Union[
+            List[Tuple[int, int]], None] = None  # [List[Tuple[idx_1_segment, idx_2_segment]] - len(segmant1.mol)
+        self.correspondence2: Union[
+            np.ndarray, None] = None  # [List[Tuple[idx_2_segment, idx_1_segment]] - len(segmant2.mol)
         self.amin_sim: Union[float, None] = None
         self.geom_dist: Union[float, None] = None
         self.icp_iterations = icp_iterations
-        self.min_dist_corresp1: Union[List[Tuple[int, int]], None] = None
-        self.min_dist_corresp2: Union[List[Tuple[int, int]], None] = None
 
         if rotations_list is None:
             print("none case")
@@ -81,8 +82,8 @@ class Alignment(ABC):
         """
 
         min_norm_value = sys.float_info.max
-        min_norm_value2 = sys.float_info.max
         out_corresp = None
+        out_corresp2 = None
         out_coords = None  # coords of segment1 in best icp alignment for `best_rotated_coords`
 
         for rotation_idx, rotation_angle in enumerate(self.rotations_list):
@@ -93,19 +94,19 @@ class Alignment(ABC):
 
             rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, corresp_values, min_dist_corresp1, min_dist_corresp2 = icp_optimization(
+            coords, norm_values, corresp_values, corresp_values2 = icp_optimization(
                 rotated_coords, coords2, self.icp_iterations
             )
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
                 out_coords = coords
                 out_corresp = corresp_values
-                self.min_dist_corresp1 = min_dist_corresp1
-                self.min_dist_corresp2 = min_dist_corresp2
+                out_corresp2 = corresp_values2
 
         self.segment2_new_coords = coords2
         self.segment1_new_coords = out_coords
         self.correspondence = out_corresp
+        self.correspondence2 = out_corresp2
         self.geom_dist = min_norm_value
 
     def compute_amin_sim(self):
@@ -286,40 +287,40 @@ class MoleculeAlignment(Alignment):
 
         self.matching_segments1, self.matching_segments2 = [], []
 
-        points_dict1 = {point[0]: pair_idx for pair_idx, point in enumerate(self.min_dist_corresp1)}
-        points_dict2 = {point[0]: pair_idx for pair_idx, point in enumerate(self.min_dist_corresp2)}
+        points_dict1 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence)}
+        points_dict2 = {point[0]: pair_idx for pair_idx, point in enumerate(self.correspondence2)}
 
         is_pair_close1 = np.linalg.norm(
-            self.segment1_new_coords[self.min_dist_corresp1[:, 0]] - self.segment2_new_coords[self.min_dist_corresp1[:, 1]],
+            self.segment1_new_coords[self.correspondence[:, 0]] - self.segment2_new_coords[self.correspondence[:, 1]],
             axis=1
         ) < self.closeness_threshold
 
         is_pair_close2 = np.linalg.norm(
-            self.segment1_new_coords[self.min_dist_corresp2[:, 1]] - self.segment2_new_coords[self.min_dist_corresp2[:, 0]],
+            self.segment1_new_coords[self.correspondence2[:, 1]] - self.segment2_new_coords[self.correspondence2[:, 0]],
             axis=1
         ) < self.closeness_threshold
 
-        for face_idx, points in enumerate(self.segment1.mol.faces):
-            is_face_close = True
-            for point_idx in points:
+        faces_array = np.array(self.segment1.mol.faces, dtype=object)
+        mapped_indices = np.vectorize(points_dict1.get)(faces_array)
+        valid_points_mask = mapped_indices != None
+        mapped_indices = np.where(valid_points_mask, mapped_indices, -1).astype(int)
 
-                if point_idx not in self.min_dist_corresp1[:, 0] or not is_pair_close1[points_dict1[point_idx]]:
-                    is_face_close = False
-                    break
+        is_face_close_mask = np.all(valid_points_mask, axis=1) & np.all(
+            np.take(is_pair_close1, mapped_indices, axis=0), axis=1
+        )
 
-            if is_face_close:
-                self.matching_segments1.append(face_idx)
+        self.matching_segments1.extend(np.where(is_face_close_mask)[0].tolist())
 
-        for face_idx, points in enumerate(self.segment2.mol.faces):
-            is_face_close = True
-            for point_idx in points:
+        faces_array = np.array(self.segment2.mol.faces, dtype=object)
+        mapped_indices = np.vectorize(points_dict2.get)(faces_array)
+        valid_points_mask = mapped_indices != None
+        mapped_indices = np.where(valid_points_mask, mapped_indices, -1).astype(int)
 
-                if point_idx not in self.min_dist_corresp2[:, 0] or not is_pair_close2[points_dict2[point_idx]]:
-                    is_face_close = False
-                    break
+        is_face_close_mask = np.all(valid_points_mask, axis=1) & np.all(
+            np.take(is_pair_close2, mapped_indices, axis=0), axis=1
+        )
 
-            if is_face_close:
-                self.matching_segments2.append(face_idx)
+        self.matching_segments2.extend(np.where(is_face_close_mask)[0].tolist())
 
     def draw(self, alpha: float = 0.5):
         Alignment._draw(
