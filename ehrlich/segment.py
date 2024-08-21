@@ -50,7 +50,7 @@ class Segment:
         """
         Adds one more env to segment.
         """
-        print(f"Adding env {self.area}")
+        # print(f"Adding env {self.area}")
         new_faces, new_points = _get_neighbour_data(self.envs[-1], self.face_list, self.mol.faces,
                                                     self.used_points, self.used_faces)
         self.area += self._area_of_faces(new_faces)

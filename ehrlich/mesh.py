@@ -125,7 +125,7 @@ class Mesh:
         v_idxs = self._sample(segments_number)
         segments = []
         for iteration, idx in enumerate(v_idxs):
-            print(f"{iteration} out of {segments_number}")
+            # print(f"{iteration} out of {segments_number}")
             segment = Segment(self, idx)
             segment.expand(area)
             segments.append(segment)

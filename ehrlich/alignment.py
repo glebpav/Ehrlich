@@ -6,10 +6,8 @@ from typing import Union, Tuple, List
 import numpy as np
 from matplotlib import pyplot as plt
 
-# from ehrlich.segment import Segment
 from ehrlich.utils.amin_similarity import get_amin_idx, amin_similarity_matrix
-from ehrlich.utils.icp_helper import icp_optimization
-from ehrlich.utils.math_utils import get_rotated_vector
+from ehrlich.utils.icp_helper import icp_step
 
 CLOSENESS_THRESHOLD = 1  # in Angstrom
 
@@ -38,7 +36,6 @@ class Alignment(ABC):
         self.icp_iterations = icp_iterations
 
         if rotations_list is None:
-            print("none case")
             rotations_list = [0]
 
         self.rotations_list = rotations_list
@@ -94,9 +91,10 @@ class Alignment(ABC):
 
             rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, corresp_values, corresp_values2 = icp_optimization(
+            coords, norm_values, corresp_values, corresp_values2 = self.icp_optimization(
                 rotated_coords, coords2, self.icp_iterations
             )
+
             if min_norm_value > norm_values:
                 min_norm_value = norm_values
                 out_coords = coords
@@ -122,6 +120,36 @@ class Alignment(ABC):
             amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
 
         self.amin_sim = amin_score / len(self.correspondence)
+
+    def icp_optimization(
+            self,
+            coords_list1: np.ndarray,
+            coords_list2: np.ndarray,
+            iterations: int,
+            # icp_brake_point_function=lambda p_coords, q_coords: False
+    ) -> (np.ndarray, float, np.ndarray, np.ndarray):
+
+        p_coords = coords_list1.T
+        q_coords = coords_list2.T
+
+        norm_value = 0.
+        p_coords_copy = p_coords.copy()
+        correspondence, correspondence2 = None, None
+
+        for i in range(iterations):
+            print(f"icp iteration {i}")
+            new_p_coords_copy, new_norm_value, new_correspondence, new_correspondence2 = icp_step(p_coords_copy, q_coords)
+            if self._icp_break_point(new_p_coords_copy.T, coords_list2, new_correspondence, new_correspondence2):
+                break
+            p_coords_copy = new_p_coords_copy
+            norm_value = new_norm_value
+            correspondence = new_correspondence
+            correspondence2 = new_correspondence2
+
+        return p_coords_copy.T, norm_value, correspondence, correspondence2
+
+    def _icp_break_point(self, coords1, coords2, correspondence, correspondence2) -> bool:
+        return False
 
     def _draw(
             self,
@@ -301,7 +329,7 @@ class MoleculeAlignment(Alignment):
         ) < self.closeness_threshold
 
         faces_array = np.array(self.segment1.mol.faces, dtype=object)
-        mapped_indices = np.vectorize(points_dict1.get)(faces_array)
+        mapped_indices = np.vectorize(lambda x: points_dict1.get(x, -1))(faces_array)
         valid_points_mask = mapped_indices != None
         mapped_indices = np.where(valid_points_mask, mapped_indices, -1).astype(int)
 
@@ -311,8 +339,9 @@ class MoleculeAlignment(Alignment):
 
         self.matching_segments1.extend(np.where(is_face_close_mask)[0].tolist())
 
-        faces_array = np.array(self.segment2.mol.faces, dtype=object)
-        mapped_indices = np.vectorize(points_dict2.get)(faces_array)
+        faces_array = np.array(self.segment2.mol.faces)
+
+        mapped_indices = np.vectorize(lambda x: points_dict2.get(x, -1))(faces_array)
         valid_points_mask = mapped_indices != None
         mapped_indices = np.where(valid_points_mask, mapped_indices, -1).astype(int)
 
@@ -321,6 +350,35 @@ class MoleculeAlignment(Alignment):
         )
 
         self.matching_segments2.extend(np.where(is_face_close_mask)[0].tolist())
+
+    def _icp_break_point(self, coords1, coords2, correspondence, correspondence2) -> bool:
+
+        previous_segment1_new_coords = self.segment1_new_coords
+        previous_segment2_new_coords = self.segment2_new_coords
+        previous_correspondence = self.correspondence
+        previous_correspondence2 = self.correspondence2
+
+        self.segment1_new_coords = coords1
+        self.segment2_new_coords = coords2
+        self.correspondence = correspondence
+        self.correspondence2 = correspondence2
+
+        self._find_matching_faces()
+        this_icp_score = self.match_area
+
+        if not hasattr(self, "previous_icp_score"):
+            self.previous_icp_score = this_icp_score
+            return False
+
+        is_smaller = self.previous_icp_score > this_icp_score
+        self.previous_icp_score = this_icp_score
+
+        self.segment1_new_coords = previous_segment1_new_coords
+        self.segment2_new_coords = previous_segment2_new_coords
+        self.correspondence = previous_correspondence
+        self.correspondence2 = previous_correspondence2
+
+        return is_smaller
 
     def draw(self, alpha: float = 0.5):
         Alignment._draw(
