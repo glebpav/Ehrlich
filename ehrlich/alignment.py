@@ -49,7 +49,11 @@ class Alignment(ABC):
 
         """
         Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
-        :return: np.ndarray of computed coords
+        :param aligning_points: np.ndarray with shape (N, 3) of points coordinates that should be aligned
+        :param origin_point_coords: np.ndarray with shape (1, 3) of origin point coordinates (after this function it will
+        have (0, 0, 0) coordinates)
+        :param origin_norm: np.ndarray with shape (1, 3) of normal for origin point
+        :return: np.ndarray with shape (N, 3) of aligned points coordinates:
         """
 
         e3 = origin_norm
@@ -66,6 +70,20 @@ class Alignment(ABC):
 
         return np.array(out_coords)
 
+    def compute_amin_sim(self):
+
+        """
+        computing amin similarity between two aligned parts
+        """
+
+        amin_score = 0.
+        for idx1, idx2 in self.correspondence:
+            acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
+            acid_idx2 = get_amin_idx(self.segment2.mol.resnames[self.segment2.mol.vamap[idx2]])
+            amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
+
+        self.amin_sim = amin_score / len(self.correspondence)
+
     def icp_alignment(
             self,
             coords1: np.ndarray,
@@ -73,7 +91,7 @@ class Alignment(ABC):
     ) -> None:
 
         """
-        Align 2 segments using ICP algorithm
+        Finds best position for coords1 using ICP algorithm with the best **rotation** and align
         :param coords1: np.ndarray of coordinates of first aligning part
         :param coords2: np.ndarray of coordinates of second aligning part
         """
@@ -107,30 +125,23 @@ class Alignment(ABC):
         self.correspondence2 = out_corresp2
         self.geom_dist = min_norm_value
 
-    def compute_amin_sim(self):
-
-        """
-        computing amin similarity between two aligned parts
-        """
-
-        amin_score = 0.
-        for idx1, idx2 in self.correspondence:
-            acid_idx1 = get_amin_idx(self.segment1.mol.resnames[self.segment1.mol.vamap[idx1]])
-            acid_idx2 = get_amin_idx(self.segment2.mol.resnames[self.segment2.mol.vamap[idx2]])
-            amin_score += amin_similarity_matrix[acid_idx1][acid_idx2]
-
-        self.amin_sim = amin_score / len(self.correspondence)
-
     def icp_optimization(
             self,
-            coords_list1: np.ndarray,
-            coords_list2: np.ndarray,
-            iterations: int,
-            # icp_brake_point_function=lambda p_coords, q_coords: False
+            coords1: np.ndarray,
+            coords2: np.ndarray,
+            iterations: int
     ) -> (np.ndarray, float, np.ndarray, np.ndarray):
 
-        p_coords = coords_list1.T
-        q_coords = coords_list2.T
+        """
+        Find best position for coords1 using ICP algorithm with best align
+        :param coords1: np.ndarray of coordinates of first aligning part
+        :param coords2: np.ndarray of coordinates of second aligning part
+        :param iterations: number of ICP iterations (thus real number of computed iterations could be less in case if
+        _icp_break_point() is overridden in child class)
+        """
+
+        p_coords = coords1.T
+        q_coords = coords2.T
 
         norm_value = 0.
         p_coords_copy = p_coords.copy()
@@ -138,9 +149,12 @@ class Alignment(ABC):
 
         for i in range(iterations):
             print(f"icp iteration {i}")
-            new_p_coords_copy, new_norm_value, new_correspondence, new_correspondence2 = icp_step(p_coords_copy, q_coords)
-            if self._icp_break_point(new_p_coords_copy.T, coords_list2, new_correspondence, new_correspondence2):
+            new_p_coords_copy, new_norm_value, new_correspondence, new_correspondence2 = icp_step(p_coords_copy,
+                                                                                                  q_coords)
+
+            if self._icp_break_point(new_p_coords_copy.T, coords2, new_correspondence, new_correspondence2):
                 break
+
             p_coords_copy = new_p_coords_copy
             norm_value = new_norm_value
             correspondence = new_correspondence
@@ -148,7 +162,22 @@ class Alignment(ABC):
 
         return p_coords_copy.T, norm_value, correspondence, correspondence2
 
-    def _icp_break_point(self, coords1, coords2, correspondence, correspondence2) -> bool:
+    def _icp_break_point(
+            self,
+            coords1: np.ndarray,
+            coords2: np.ndarray,
+            correspondence: np.ndarray,
+            correspondence2: np.ndarray
+    ) -> bool:
+        """
+        Function that stops icp algorithm. In base case there is no need to stop by any metric
+        only count of iterations important
+        :param coords1: np.ndarray of coordinates of first aligning part
+        :param coords2: np.ndarray of coordinates of second aligning part
+        :param correspondence: np.ndarray of correspondence for each point from first part
+        :param correspondence2: np.ndarray of correspondence for each point from second part
+        :return: True if icp algorithm should be stopped, False otherwise (in base realization always returns False)
+        """
         return False
 
     def _draw(
@@ -351,7 +380,13 @@ class MoleculeAlignment(Alignment):
 
         self.matching_segments2.extend(np.where(is_face_close_mask)[0].tolist())
 
-    def _icp_break_point(self, coords1, coords2, correspondence, correspondence2) -> bool:
+    def _icp_break_point(
+            self,
+            coords1: np.ndarray,
+            coords2: np.ndarray,
+            correspondence: np.ndarray,
+            correspondence2: np.ndarray
+    ) -> bool:
 
         previous_segment1_new_coords = self.segment1_new_coords
         previous_segment2_new_coords = self.segment2_new_coords

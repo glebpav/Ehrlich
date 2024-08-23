@@ -1,9 +1,4 @@
-import sys
-from typing import List, Tuple
-from scipy.optimize import linear_sum_assignment
-
 import numpy as np
-import time
 
 
 CORRESPONDENCE_THRESHOLD = 15
