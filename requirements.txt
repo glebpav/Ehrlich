@@ -10,3 +10,4 @@ pyacvd~=0.2.10
 naskit~=0.8.0
 ehrlich~=1.0.0
 scipy~=1.13.1
+multipledispatch~=1.0.0

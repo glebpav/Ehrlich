@@ -1,5 +1,6 @@
 import numpy as np
 
+from ehrlich.utils.displacement import Rotation, Displacement
 
 CORRESPONDENCE_THRESHOLD = 15
 
@@ -32,7 +33,7 @@ def compute_cross_covariance(P, Q, correspondences):
     return covariance_matrix
 
 
-def icp_step(p_coords: np.ndarray, q_coords: np.ndarray) -> (np.ndarray, float, np.ndarray, np.ndarray):
+def icp_step(p_coords: np.ndarray, q_coords: np.ndarray) -> (np.ndarray, float, np.ndarray, np.ndarray, Displacement):
     delta = p_coords.T.reshape(-1, 1, 3) - q_coords.T
     dists = np.linalg.norm(delta, axis=-1)
 
@@ -44,10 +45,12 @@ def icp_step(p_coords: np.ndarray, q_coords: np.ndarray) -> (np.ndarray, float, 
     R = U.dot(V_T)
     p_coords = R.dot(p_coords)
 
+    displacement = Rotation(R, second_place=True)
+
     p_indices = correspondences[:, 0]
     q_indices = correspondences[:, 1]
     norm_value = np.mean(dists[p_indices, q_indices])
 
-    return p_coords, norm_value, correspondences, correspondences2
+    return p_coords, norm_value, correspondences, correspondences2, displacement
 
 

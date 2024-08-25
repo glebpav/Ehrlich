@@ -7,6 +7,7 @@ from naskit.containers.pdb import NucleicAcidChain, ProteinChain, PdbAtom
 from .molecule import Molecule
 from .mesh import Mesh
 from .segment import Segment
+from .utils.displacement import Displacement
 
 
 class MoleculeStructure(Molecule, Mesh):
@@ -19,10 +20,12 @@ class MoleculeStructure(Molecule, Mesh):
             anames: Iterable[str],
             acoords: np.ndarray,
             resnum: Iterable[int],
-            resnames: Iterable[str]
+            resnames: Iterable[str],
+            molecule: Union[NucleicAcidChain, ProteinChain]
     ):
         Molecule.__init__(self, anames, acoords, resnum, resnames)
         Mesh.__init__(self)
+        self.molecule = molecule
         self.vamap: List[int] = None  # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
 
     @classmethod
@@ -55,7 +58,7 @@ class MoleculeStructure(Molecule, Mesh):
             center_coords /= len(acoords)
             acoords -= center_coords
 
-        return cls(anames, acoords, resnum, resnames)
+        return cls(anames, acoords, resnum, resnames, pdb)
 
     @classmethod
     def load(cls, path: Union[str, Path]) -> "MoleculeStructure":
@@ -82,7 +85,8 @@ class MoleculeStructure(Molecule, Mesh):
             "neibs": self.neibs,
             "faces": self.faces,
             "segments": self.segments,
-            "vamap": self.vamap
+            "vamap": self.vamap,
+            "molecule": self.molecule
         }
 
     def __setstate__(self, d):
@@ -95,8 +99,15 @@ class MoleculeStructure(Molecule, Mesh):
         self.faces: List[Tuple[int, int, int]] = d.get("faces")
         self.segments: List[Segment] = d.get("segments")
         self.vamap: List[int] = d.get("vamap")
+        self.molecule: Union[NucleicAcidChain, ProteinChain] = d.get("molecule")
 
-    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, path_to_pdb2pqr: str = 'pdb2pqr', center_struct: bool = True):
+    def make_mesh(
+            self,
+            poly_area: float = 25,
+            path_to_pdb: str = None,
+            path_to_pdb2pqr: str = 'pdb2pqr',
+            center_struct: bool = True
+    ):
         super(MoleculeStructure, self).make_mesh(poly_area, path_to_pdb, path_to_pdb2pqr, center_struct)
         self.project()
 
@@ -107,3 +118,12 @@ class MoleculeStructure(Molecule, Mesh):
 
         d = np.linalg.norm((self.vcoords[:, np.newaxis, :] - self.acoords), axis=2)
         self.vamap = np.argmin(d, axis=1)
+
+    def get_transform_molecule(self, displacement_list: List[Displacement]) -> Union[NucleicAcidChain, ProteinChain]:
+        molecule_copy = self.molecule.copy()
+        coords = molecule_copy.coords
+        for displacement in displacement_list:
+            coords = displacement.displace(coords=coords)
+        molecule_copy.coords = coords
+        return molecule_copy
+

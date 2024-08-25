@@ -7,6 +7,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from ehrlich.utils.amin_similarity import get_amin_idx, amin_similarity_matrix
+from ehrlich.utils.displacement import Displacement, ParallelTranslation, Rotation, Transpose
 from ehrlich.utils.icp_helper import icp_step
 
 CLOSENESS_THRESHOLD = 1  # in Angstrom
@@ -45,7 +46,7 @@ class Alignment(ABC):
             aligning_points: np.ndarray,
             origin_point_coords: np.ndarray,
             origin_norm: np.ndarray
-    ) -> np.ndarray:
+    ) -> (np.ndarray, List[Displacement]):
 
         """
         Compute moved and rotated coords to make origin point in (0; 0; 0) and its norm (0; 0; 1)
@@ -63,12 +64,11 @@ class Alignment(ABC):
 
         t = np.array([e1, e2, e3]).T
         t_inv = np.linalg.inv(t)
+        out_coords = np.dot((aligning_points - origin_point_coords), t_inv.T)
 
-        out_coords = []
-        for point in aligning_points:
-            out_coords.append(np.matmul(t_inv, point - origin_point_coords))
+        displacement_queue = [ParallelTranslation(-1., origin_point_coords), Rotation(t_inv.T)]
 
-        return np.array(out_coords)
+        return np.array(out_coords), displacement_queue
 
     def compute_amin_sim(self):
 
@@ -88,7 +88,7 @@ class Alignment(ABC):
             self,
             coords1: np.ndarray,
             coords2: np.ndarray,
-    ) -> None:
+    ) -> List[Displacement]:
 
         """
         Finds best position for coords1 using ICP algorithm with the best **rotation** and align
@@ -100,6 +100,7 @@ class Alignment(ABC):
         out_corresp = None
         out_corresp2 = None
         out_coords = None  # coords of segment1 in best icp alignment for `best_rotated_coords`
+        total_displacement_queue = None
 
         for rotation_idx, rotation_angle in enumerate(self.rotations_list):
             print(f"rotation_idx: {rotation_idx}")
@@ -109,7 +110,7 @@ class Alignment(ABC):
 
             rotated_coords = coords1 @ np.array([[cos, -sin, 0], [sin, cos, 0], [0, 0, 1]])
 
-            coords, norm_values, corresp_values, corresp_values2 = self.icp_optimization(
+            coords, norm_values, corresp_values, corresp_values2, displacement_list = self.icp_optimization(
                 rotated_coords, coords2, self.icp_iterations
             )
 
@@ -118,6 +119,7 @@ class Alignment(ABC):
                 out_coords = coords
                 out_corresp = corresp_values
                 out_corresp2 = corresp_values2
+                total_displacement_queue = displacement_list
 
         self.segment2_new_coords = coords2
         self.segment1_new_coords = out_coords
@@ -125,12 +127,14 @@ class Alignment(ABC):
         self.correspondence2 = out_corresp2
         self.geom_dist = min_norm_value
 
+        return total_displacement_queue
+
     def icp_optimization(
             self,
             coords1: np.ndarray,
             coords2: np.ndarray,
             iterations: int
-    ) -> (np.ndarray, float, np.ndarray, np.ndarray):
+    ) -> (np.ndarray, float, np.ndarray, np.ndarray, List[Displacement]):
 
         """
         Find best position for coords1 using ICP algorithm with best align
@@ -146,11 +150,12 @@ class Alignment(ABC):
         norm_value = 0.
         p_coords_copy = p_coords.copy()
         correspondence, correspondence2 = None, None
+        displacement_queue = [Transpose()]
 
         for i in range(iterations):
             print(f"icp iteration {i}")
-            new_p_coords_copy, new_norm_value, new_correspondence, new_correspondence2 = icp_step(p_coords_copy,
-                                                                                                  q_coords)
+            new_p_coords_copy, new_norm_value, new_correspondence, new_correspondence2, displacement = icp_step(
+                p_coords_copy, q_coords)
 
             if self._icp_break_point(new_p_coords_copy.T, coords2, new_correspondence, new_correspondence2):
                 break
@@ -159,8 +164,10 @@ class Alignment(ABC):
             norm_value = new_norm_value
             correspondence = new_correspondence
             correspondence2 = new_correspondence2
+            displacement_queue.append(displacement)
 
-        return p_coords_copy.T, norm_value, correspondence, correspondence2
+        displacement_queue.append(Transpose())
+        return p_coords_copy.T, norm_value, correspondence, correspondence2, displacement_queue
 
     def _icp_break_point(
             self,
@@ -263,18 +270,18 @@ class SegmentAlignment(Alignment):
         Align 2 segments by icp algorithm witch fills left fields in this class
         """
 
-        aligned_coords1 = self.z_axis_alignment(
+        aligned_coords1, _ = self.z_axis_alignment(
             np.array([self.segment1.mol.vcoords[point_idx] for point_idx in self.segment1.used_points]),
             self.segment1.mol.vcoords[self.segment1.origin_idx],
             self.segment1.mol.compute_norm(self.segment1.origin_idx)
         )
-        aligned_coords2 = self.z_axis_alignment(
+        aligned_coords2, _ = self.z_axis_alignment(
             np.array([self.segment2.mol.vcoords[point_idx] for point_idx in self.segment2.used_points]),
             self.segment2.mol.vcoords[self.segment2.origin_idx],
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 
-        self.icp_alignment(aligned_coords1, aligned_coords2)
+        _ = self.icp_alignment(aligned_coords1, aligned_coords2)
         self.compute_amin_sim()
 
     def draw(self, alpha: float = 0.5):
@@ -297,6 +304,9 @@ class MoleculeAlignment(Alignment):
         self.matching_segments1: Union[List[int], None] = None
         self.matching_segments2: Union[List[int], None] = None
         self.closeness_threshold: float = closeness_threshold
+        self.displacement_queue1: List[Displacement] = []
+        self.displacement_queue2: List[Displacement] = []
+
         self._find_best_alignment()
         self.compute_amin_sim()
 
@@ -322,23 +332,29 @@ class MoleculeAlignment(Alignment):
         return self.match_area / (self.segment1.mol.area_of_mesh + self.segment2.mol.area_of_mesh - self.match_area)
 
     def _find_best_alignment(self):
-        aligned_coords1 = self.z_axis_alignment(
+        (aligned_coords1, displacement_queue1) = self.z_axis_alignment(
             self.segment1.mol.vcoords,
             self.segment1.mol.vcoords[self.segment1.origin_idx],
             self.segment1.mol.compute_norm(self.segment1.origin_idx)
         )
-        aligned_coords2 = self.z_axis_alignment(
+        aligned_coords2, displacement_queue2 = self.z_axis_alignment(
             self.segment2.mol.vcoords,
             self.segment2.mol.vcoords[self.segment2.origin_idx],
             self.segment2.mol.compute_norm(self.segment2.origin_idx)
         )
 
-        self.icp_alignment(aligned_coords1, aligned_coords2)
+        icp_displacement = self.icp_alignment(aligned_coords1, aligned_coords2)
+
+        displacement_queue1 += icp_displacement
+
         self.compute_amin_sim()
         self.total_amin_sim = self.amin_sim * len(self.correspondence)
         self.total_geom_dist = self.geom_dist * len(self.correspondence)
 
         self._find_matching_faces()
+
+        self.displacement_queue1 = displacement_queue1
+        self.displacement_queue2 = displacement_queue2
 
     def _find_matching_faces(self):
 
