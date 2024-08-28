@@ -5,9 +5,10 @@ from typing import Union, Tuple, List
 
 import numpy as np
 from matplotlib import pyplot as plt
+from naskit.containers.pdb import NucleicAcidChain, ProteinChain
 
 from ehrlich.utils.amin_similarity import get_amin_idx, amin_similarity_matrix
-from ehrlich.utils.displacement import Displacement, ParallelTranslation, Rotation, Transpose
+from ehrlich.utils.displacement import Displacement, Translation, Rotation, Transpose
 from ehrlich.utils.icp_helper import icp_step
 
 CLOSENESS_THRESHOLD = 1  # in Angstrom
@@ -66,7 +67,7 @@ class Alignment(ABC):
         t_inv = np.linalg.inv(t)
         out_coords = np.dot((aligning_points - origin_point_coords), t_inv.T)
 
-        displacement_queue = [ParallelTranslation(-1., origin_point_coords), Rotation(t_inv.T)]
+        displacement_queue = [Translation(-origin_point_coords), Rotation(t_inv.T)]
 
         return np.array(out_coords), displacement_queue
 
@@ -244,6 +245,8 @@ class Alignment(ABC):
 
             self.segment1.mol.vcoords = origin_coords1
             self.segment2.mol.vcoords = origin_coords2
+
+        return ax
 
     def stat(self):
         return {
@@ -431,14 +434,39 @@ class MoleculeAlignment(Alignment):
 
         return is_smaller
 
+    def get_transformed_molecules(self) -> (
+            Union[NucleicAcidChain, ProteinChain],
+            Union[NucleicAcidChain, ProteinChain]
+    ):
+
+        """
+        Returns the transformed molecules.
+        First returning molecule is molecule that was gotten from `MoleculeStructure`
+        object witch segment had called `mal_align` method, second molecule is that
+        you've passed as an argument for `mol_align` method.
+        """
+
+        molecule_copy1 = self.segment1.mol.molecule.copy()
+        molecule_copy2 = self.segment2.mol.molecule.copy()
+        coords1 = molecule_copy1.coords
+        coords2 = molecule_copy2.coords
+        for displacement in self.displacement_queue1:
+            coords1 = displacement.displace(coords=coords1)
+        for displacement in self.displacement_queue2:
+            coords2 = displacement.displace(coords=coords2)
+        molecule_copy1.coords = coords1
+        molecule_copy2.coords = coords2
+        return molecule_copy1, molecule_copy2
+
     def draw(self, alpha: float = 0.5):
-        Alignment._draw(
+        ax = Alignment._draw(
             self,
             with_whole_surface=True,
             alpha=alpha,
             colored_faces_segment1=self.matching_segments1,
             colored_faces_segment2=self.matching_segments2
         )
+        return ax
 
     def stat(self):
         return {

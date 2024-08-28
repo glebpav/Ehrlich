@@ -25,7 +25,7 @@ class MoleculeStructure(Molecule, Mesh):
     ):
         Molecule.__init__(self, anames, acoords, resnum, resnames)
         Mesh.__init__(self)
-        self.molecule = molecule
+        self.molecule: Union[NucleicAcidChain, ProteinChain] = molecule
         self.vamap: List[int] = None  # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
 
     @classmethod
@@ -57,6 +57,7 @@ class MoleculeStructure(Molecule, Mesh):
         if center_struct:
             center_coords /= len(acoords)
             acoords -= center_coords
+            pdb.coords = acoords
 
         return cls(anames, acoords, resnum, resnames, pdb)
 

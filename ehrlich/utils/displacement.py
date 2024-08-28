@@ -25,7 +25,8 @@ class Displacement(ABC):
         ...
 
 
-class ParallelTranslation(Displacement):
+# todo:
+class Translation(Displacement):
 
     """
     Applies a parallel translation to a set of 3D coordinates. The translation
@@ -71,6 +72,7 @@ class Rotation(Displacement):
         return np.dot(coords, self.rotation_matrix)
 
 
+# todo: remove 
 class Transpose(Displacement):
 
     """
