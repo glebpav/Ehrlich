@@ -1,2 +1,2 @@
 from .molecule_structure import MoleculeStructure
-# from .segment import Segment
+from .pipline import filter_segments_by_alignment, filter_segments_by_descriptors
