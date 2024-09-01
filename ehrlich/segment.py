@@ -20,10 +20,11 @@ class Segment:
     Circular region of structure surface witch used to make comparisons
     """
     
-    def __init__(self, mol: "MoleculeStructure", origin_idx: int):
+    def __init__(self, mol: "MoleculeStructure", origin_idx: int, segment_idx: int):
         """
         :param mol: MoleculeStructure object this segment was built on
         :param origin_idx: index of origin vertex
+        :param segment_idx: index of segment
         envs: list of list of env indices
         area: area of segment
         amins_count: vector of int32 with 20 counters for each aminoacid. Counts all unique amins in segment
@@ -34,6 +35,7 @@ class Segment:
         self.mol: MoleculeStructure = mol
         self.origin_idx = origin_idx
         self.envs: List[List[int]] = []
+        self.idx: int = segment_idx
         self.area: float = 0.
         # self.amins_count: Union[np.ndarray | None] = None
         self.envs_surfaces: Union[np.ndarray | None] = None

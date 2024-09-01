@@ -126,7 +126,7 @@ class Mesh:
         segments = []
         for iteration, idx in enumerate(v_idxs):
             # print(f"{iteration} out of {segments_number}")
-            segment = Segment(self, idx)
+            segment = Segment(self, idx, iteration)
             segment.expand(area)
             segments.append(segment)
 
