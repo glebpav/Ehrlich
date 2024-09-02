@@ -1,8 +1,10 @@
+import itertools
 import time
 from typing import Tuple, List, Callable
 
 import numpy as np
 
+from ehrlich import MoleculeStructure
 from ehrlich.segment import Segment
 
 DEFAULT_AMIN_THRESHOLD = 0.1
@@ -53,7 +55,7 @@ def filter_segments_by_descriptors(
         descr_gtop: int = 15,
         descr_amin_filter: Callable[[Segment, Segment], Tuple[bool, float]] = default_amin_descr_filter,
         descr_atop: int = 10
-) -> np.array:
+) -> List[Tuple[Segment, Segment]]:
 
     descriptors_geometry_top = filter_paris_data(pairs, descr_geom_filter, descr_gtop)
     descriptors_amin_top = filter_paris_data(descriptors_geometry_top, descr_amin_filter, descr_atop, True)
@@ -75,7 +77,7 @@ def filter_segments_by_alignment(
         align_segment_top: int = 5,
         align_mol_filter: Callable[[Segment, Segment], Tuple[bool, float]] = default_molecule_align_filter,
         align_mtop: int = 3,
-) -> np.array:
+) -> List[Tuple[Segment, Segment]]:
 
     align_segment_top = filter_paris_data(pairs, align_segment_filter, align_segment_top)
     align_molecule_top = filter_paris_data(align_segment_top, align_mol_filter, align_mtop)
@@ -83,6 +85,23 @@ def filter_segments_by_alignment(
     return align_molecule_top
 
 
+def combine_segments(segments1: List[Segment], segments2: List[Segment]) -> List[Tuple[Segment, Segment]]:
+    return list(itertools.product(segments1, segments2))
+
+
+def find_fit_segments(segments1, segments2, **kwargs) -> List[Tuple[Segment, Segment]]:
+    segments_pairs = combine_segments(segments1, segments2)
+    after_desc_pairs = filter_segments_by_descriptors(segments_pairs)
+    after_align_pairs = filter_segments_by_alignment(after_desc_pairs, align_mtop=kwargs['topk'])
+    return after_align_pairs
+
+
+def find_best_mol_alignment(
+        struct1: MoleculeStructure,
+        struct2: MoleculeStructure,
+        topk: int = 3
+) -> List[Tuple[Segment, Segment]]:
+    return find_fit_segments(struct1.segments, struct2.segments, topk=topk)
 
 
 
