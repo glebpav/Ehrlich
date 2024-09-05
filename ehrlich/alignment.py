@@ -335,7 +335,7 @@ class MoleculeAlignment(Alignment):
         return self.match_area / (self.segment1.mol.area_of_mesh + self.segment2.mol.area_of_mesh - self.match_area)
 
     def _find_best_alignment(self):
-        (aligned_coords1, displacement_queue1) = self.z_axis_alignment(
+        aligned_coords1, displacement_queue1 = self.z_axis_alignment(
             self.segment1.mol.vcoords,
             self.segment1.mol.vcoords[self.segment1.origin_idx],
             self.segment1.mol.compute_norm(self.segment1.origin_idx)

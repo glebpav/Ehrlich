@@ -25,7 +25,6 @@ class Displacement(ABC):
         ...
 
 
-# todo:
 class Translation(Displacement):
 
     """
