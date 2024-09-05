@@ -59,7 +59,7 @@ class Alignment(ABC):
         """
 
         e3 = origin_norm
-        g = np.array([10, 0, -(e3[0] / e3[2])])
+        g = np.array([1, 0, -(e3[0] / e3[2])])
         e1 = g / np.linalg.norm(g)
         e2 = np.cross(e3, e1)
 
