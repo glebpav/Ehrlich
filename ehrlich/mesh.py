@@ -38,9 +38,16 @@ class Mesh:
         self.neibs: List[Tuple[int]] = None
         self.faces: List[Tuple[int, int, int]] = None
         self.segments: List[Segment] = None
-        self.faces_areas: np.ndarray = None # List[int]
+        self.faces_areas: np.ndarray = None  # List[int]
 
-    def make_mesh(self, poly_area: float = 25, path_to_pdb: str = None, path_to_pdb2pqr: str = 'pdb2pqr', center_struct: bool = True):
+    def make_mesh(
+            self,
+            poly_area: float = 25,
+            path_to_pdb: str = None,
+            path_to_pdb2pqr: str = 'pdb2pqr',
+            center_struct: bool = True,
+            d: float = 0.6
+    ) -> None:
         """
         Creates mesh based on molecule atoms and coords. Fills all class fields. 
         Remeshes automatically to fit polygon area.
@@ -49,9 +56,11 @@ class Mesh:
         :param path_to_pdb: path to pdb file
         :param path_to_pdb2pqr: path to pdb2pqr file
         :param center_struct: if true - geometry center of vertices will be in (0; 0; 0)
+        :param d: TMSmesh parameter in [0.1 ... 0.9] of surface quality. The higher the
+        value, the greater the number of points forming the surface and it is more detailed
         """
 
-        d = 0.6
+        # d = 0.4
         e = 0.99
 
         path_to_pqr = path_to_pdb.replace(".pdb", "")
@@ -151,7 +160,7 @@ class Mesh:
         input_mesh = pv.PolyData('buffer_surface.stl')
         clus = pyacvd.Clustering(input_mesh)
 
-        clus.subdivide(3)
+        clus.subdivide(1)
         clus.cluster(n)
 
         output_mesh = clus.create_mesh()
@@ -257,7 +266,9 @@ class Mesh:
         return norm_avg
 
     def compute_areas(self):
-        self.faces_areas = np.array([area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in self.faces])
+        self.faces_areas = np.array(
+            [area_of_triangle(self.vcoords[face[0]], self.vcoords[face[1]], self.vcoords[face[2]]) for face in
+             self.faces])
 
     def _get_fixed_version(self) -> "Mesh":
         """
@@ -270,7 +281,7 @@ class Mesh:
         clus = pyacvd.Clustering(input_mesh)
 
         clus.subdivide(3)
-        clus.cluster(len(self.vcoords))
+        clus.cluster(len(self.vcoords) / 2)
 
         output_mesh = clus.create_mesh()
         output_faces = [list(output_mesh.faces[1 + i * 4: (i + 1) * 4:]) for i in

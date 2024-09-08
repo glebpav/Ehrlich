@@ -107,9 +107,10 @@ class MoleculeStructure(Molecule, Mesh):
             poly_area: float = 25,
             path_to_pdb: str = None,
             path_to_pdb2pqr: str = 'pdb2pqr',
-            center_struct: bool = True
+            center_struct: bool = True,
+            d: float = 0.6
     ):
-        super(MoleculeStructure, self).make_mesh(poly_area, path_to_pdb, path_to_pdb2pqr, center_struct)
+        super(MoleculeStructure, self).make_mesh(poly_area, path_to_pdb, path_to_pdb2pqr, center_struct, d=d)
         self.project()
 
     def project(self):

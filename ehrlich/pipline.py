@@ -43,6 +43,7 @@ def filter_descriptor_paris_data(
         geometry_top_paris_idxs = np.flip(geometry_top_paris_idxs)"""
 
     top_pairs = [pairs[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]
+    print([pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]])
 
     return top_pairs
 
@@ -68,6 +69,7 @@ def filter_alignment_pairs_data(
         return list()
 
     geometry_top_paris_idxs = np.argsort(pair_value_list)
+    print([pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]])
     top_pairs = [alignment_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]
 
     return top_pairs
