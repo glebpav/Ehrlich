@@ -1,5 +1,8 @@
+import time
+
 import numpy as np
 
+from ehrlich.operations import find_closest_points
 from ehrlich.utils.displacement import Rotation, Displacement
 
 CORRESPONDENCE_THRESHOLD = 15
@@ -34,22 +37,19 @@ def compute_cross_covariance(P, Q, correspondences):
 
 
 def icp_step(p_coords: np.ndarray, q_coords: np.ndarray) -> (np.ndarray, float, np.ndarray, np.ndarray, Displacement):
+
+    correspondences, dists = find_closest_points(p_coords.astype(np.float32), q_coords.astype(np.float32))
+    correspondences2, _ = find_closest_points(q_coords, p_coords)
+
     delta = p_coords.T.reshape(-1, 1, 3) - q_coords.T
     dists = np.linalg.norm(delta, axis=-1)
-
-    correspondences = get_min_distance_correspondence(dists)
-    correspondences2 = get_min_distance_correspondence(dists.T)
 
     cov = compute_cross_covariance(p_coords, q_coords, correspondences)
     U, S, V_T = np.linalg.svd(cov)
     R = U.dot(V_T)
     p_coords = R.dot(p_coords)
-
+    norm_value = np.mean(dists)
     displacement = Rotation(R, second_place=True)
-
-    p_indices = correspondences[:, 0]
-    q_indices = correspondences[:, 1]
-    norm_value = np.mean(dists[p_indices, q_indices])
 
     return p_coords, norm_value, correspondences, correspondences2, displacement
 

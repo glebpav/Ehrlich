@@ -23,7 +23,7 @@ class MoleculeStructure(Molecule, Mesh):
             resnames: Iterable[str],
             molecule: Union[NucleicAcidChain, ProteinChain]
     ):
-        Molecule.__init__(self, anames, acoords, resnum, resnames)
+        Molecule.__init__(self, anames, acoords.astype(np.float32), resnum, resnames)
         Mesh.__init__(self)
         self.molecule: Union[NucleicAcidChain, ProteinChain] = molecule
         self.vamap: List[int] = None  # vertex-atom map: len = number of mesh vertixes. Value - index of closest atom.
@@ -92,10 +92,10 @@ class MoleculeStructure(Molecule, Mesh):
 
     def __setstate__(self, d):
         self.anames: Iterable[str] = d.get("anames")
-        self.acoords: np.ndarray = d.get("acoords")
+        self.acoords: np.ndarray = d.get("acoords").astype(np.float32)
         self.resnum: Iterable[int] = d.get("resnum")
         self.resnames: Iterable[str] = d.get("resnames")
-        self.vcoords: np.ndarray = d.get("vcoords")
+        self.vcoords: np.ndarray = d.get("vcoords").astype(np.float32)
         self.neibs: List[Tuple[int]] = d.get("neibs")
         self.faces: List[Tuple[int, int, int]] = d.get("faces")
         self.segments: List[Segment] = d.get("segments")

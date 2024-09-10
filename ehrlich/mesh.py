@@ -85,7 +85,7 @@ class Mesh:
         with open(file_name) as f:
             lines = f.readlines()
 
-        self.vcoords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)])
+        self.vcoords = np.array([list(map(float, lines[i].split())) for i in range(2, int(lines[1].split()[0]) + 2)]).astype(np.float32)
         self.faces = [tuple(map(int, lines[i].split()[1:])) for i in range(int(lines[1].split()[0]) + 2, len(lines))]
         self.neibs = [[None]] * len(self.vcoords)
         neibs = [[-1]] * len(self.vcoords)
