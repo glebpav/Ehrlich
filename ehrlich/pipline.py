@@ -5,7 +5,7 @@ from typing import Tuple, List, Callable
 import numpy as np
 
 from ehrlich import MoleculeStructure
-from ehrlich.alignment import Alignment
+from ehrlich.alignment import Alignment, MoleculeAlignment
 from ehrlich.segment import Segment
 
 DEFAULT_AMIN_THRESHOLD = 0.1
@@ -33,17 +33,13 @@ def filter_descriptor_paris_data(
     if after_filter_size == 0:
         return list()
 
-    geometry_top_paris_idxs = np.argpartition(
-        pair_value_list,
-        -after_filter_size if reverse_order_sort else after_filter_size
-    )[:after_filter_size]
-
-    """geometry_top_paris_idxs = np.argsort(pair_value_list)
+    geometry_top_paris_idxs = np.argsort(pair_value_list)
     if reverse_order_sort:
-        geometry_top_paris_idxs = np.flip(geometry_top_paris_idxs)"""
+        geometry_top_paris_idxs = np.flip(geometry_top_paris_idxs)
 
     top_pairs = [pairs[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]
-    print([pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]])
+    print(f"all pairs values: {pair_value_list}")
+    print(f"top pairs values: {[pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]}")
 
     return top_pairs
 
@@ -52,6 +48,7 @@ def filter_alignment_pairs_data(
         alignment_list: List[Alignment],
         extended_filter_function: Callable[[Alignment], Tuple[bool, float]],
         top_paris: int,
+        reverse_order_sort: bool = False,
 ) -> List[Alignment]:
 
     if len(alignment_list) == 0:
@@ -69,8 +66,12 @@ def filter_alignment_pairs_data(
         return list()
 
     geometry_top_paris_idxs = np.argsort(pair_value_list)
-    print([pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]])
+    if reverse_order_sort:
+        geometry_top_paris_idxs = np.flip(geometry_top_paris_idxs)
+
     top_pairs = [alignment_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]
+    print(f"all pairs values: {pair_value_list}")
+    print(f"top pairs values: {[pair_value_list[idx] for idx in geometry_top_paris_idxs[:after_filter_size]]}")
 
     return top_pairs
 
@@ -103,8 +104,8 @@ def default_segment_align_filter(alignment: Alignment) -> (bool, float):
     return True, alignment.geom_dist
 
 
-def default_molecule_align_filter(alignment: Alignment) -> (bool, float):
-    return True, alignment.geom_dist
+def default_molecule_align_filter(alignment: MoleculeAlignment) -> (bool, float):
+    return True, alignment.match_area_score
 
 
 def filter_segments_by_alignment(
@@ -127,7 +128,7 @@ def filter_segments_by_alignment(
         for alignment in alignment_list
     ]
 
-    alignment_list = filter_alignment_pairs_data(alignment_list, align_mol_filter, align_mtop)
+    alignment_list = filter_alignment_pairs_data(alignment_list, align_mol_filter, align_mtop, reverse_order_sort=True)
 
     return alignment_list
 
