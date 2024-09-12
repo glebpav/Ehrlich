@@ -281,7 +281,8 @@ class Mesh:
         clus = pyacvd.Clustering(input_mesh)
 
         clus.subdivide(3)
-        clus.cluster(len(self.vcoords) / 2)
+        # clus.cluster(len(self.vcoords) / 2)
+        clus.cluster(len(self.vcoords))
 
         output_mesh = clus.create_mesh()
         output_faces = [list(output_mesh.faces[1 + i * 4: (i + 1) * 4:]) for i in
